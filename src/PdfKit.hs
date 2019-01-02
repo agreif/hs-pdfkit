@@ -1,5 +1,5 @@
 module PdfKit
-    ( PdfKit.Builder.PdfDocument
+    ( PdfKit.Builder.PdfDocument(..)
     , PdfKit.Api.producer
     , PdfKit.Api.creator
     , PdfKit.Api.page
