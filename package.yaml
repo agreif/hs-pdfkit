@@ -1,0 +1,43 @@
+name:    hs-pdfkit
+version: 0.0.1
+
+category: Graphics
+description: PdfKit renders Pdf documents with a monadic API that is still very limited.
+extra-source-files:
+  - CHANGELOG.md
+  - package.yaml
+  - README.md
+  - stack.yaml
+github: agreif/hs-pdfkit
+license-file: LICENSE.md
+license: MIT
+maintainer: Alex Greif
+synopsis: Render PDF files with a monadic api.
+
+dependencies:
+- base >=4.8.2.0 && <4.9 || >=4.9.1.0 && <5
+- aeson
+- text
+- bytestring
+- time
+
+library:
+  source-dirs: src
+  when:
+  - condition: (flag(dev)) || (flag(library-only))
+    then:
+      ghc-options:
+      - -Wall
+      - -fwarn-tabs
+      - -O0
+      cpp-options: -DDEVELOPMENT
+    else:
+      ghc-options:
+      - -Wall
+      - -fwarn-tabs
+      - -O2
+
+flags:
+  library-only:
+    default: false
+    manual: false
