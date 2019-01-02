@@ -2,7 +2,7 @@
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 0ae4e16ed031995e60459371bb2dea07ffba22b980bc39fe8ebf94385039af10
+-- hash: 6088bcf6f057bd362c6090569ff73d5019b0615f98724789e6d7d6a46653a018
 
 name:           hs-pdfkit
 version:        0.0.1
@@ -59,6 +59,7 @@ library
       aeson
     , base >=4.8.2.0 && <4.9 || >=4.9.1.0 && <5
     , bytestring
+    , hex
     , text
     , time
   if (flag(dev)) || (flag(library-only))

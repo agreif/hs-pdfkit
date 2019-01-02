@@ -6,6 +6,7 @@ import Data.Time
 import Data.Aeson
 import qualified Data.List as L
 import Data.Text (Text)
+import qualified Data.Hex as H
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
 import Control.Monad
@@ -179,7 +180,7 @@ instance ToJSON PdfInfo where
 
 instance ToByteStringLines PdfInfo where
   toByteStringLines pdfInfo =
-    [ T.encodeUtf8 $ T.concat [(T.pack $ show $ pdfInfoObjId pdfInfo), " 0 obj"]
+    [ T.encodeUtf8 $ T.concat [T.pack $ show $ pdfInfoObjId pdfInfo, " 0 obj"]
     , T.encodeUtf8 $ T.concat ["% ------------------------------------------------------ info ", (intToText $ pdfInfoObjId pdfInfo)]
     , T.encodeUtf8 "<<"
     , T.encodeUtf8 $ T.concat ["/Producer (", pdfInfoProducer pdfInfo, ")"]
@@ -261,7 +262,7 @@ instance ToJSON PdfFont where
 
 instance ToByteStringLines PdfFont where
   toByteStringLines pdfFont =
-    [ T.encodeUtf8 $ T.concat [(T.pack $ show $ pdfFontObjId pdfFont), " 0 obj"]
+    [ T.encodeUtf8 $ T.concat [T.pack $ show $ pdfFontObjId pdfFont, " 0 obj"]
     , T.encodeUtf8 $ T.concat ["% ------------------------------------------------------ Font ", (intToText $ pdfFontObjId pdfFont)]
     , T.encodeUtf8 "<<"
     , T.encodeUtf8 $ "/Type /Font"
@@ -410,7 +411,7 @@ instance ToByteStringLines (PdfContents, PdfPage, PdfDocument) where
                      , (doubleToText $ pdfTextFontSize pdfText)
                      , " Tf"
                      ]
-           , T.concat ["(", pdfTextText pdfText,  ") Tj"]
+           , T.concat ["[<", T.decodeUtf8 $ H.hex $ B8.pack $ T.unpack $ pdfTextText pdfText, "> 0] TJ"]
            , "ET"
            , "Q"
            ] :: [Text]

@@ -20,6 +20,7 @@ dependencies:
 - text
 - bytestring
 - time
+- hex
 
 library:
   source-dirs: src
