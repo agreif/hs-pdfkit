@@ -2,6 +2,7 @@ module PdfKit.Api
   ( PdfKit.Api.producer
   , PdfKit.Api.creator
   , PdfKit.Api.page
+  , PdfKit.Api.pageTemplate
   , PdfKit.Api.font
   , PdfKit.Api.fontSize
   , PdfKit.Api.pageSize
@@ -32,9 +33,14 @@ creator :: Text -> DocumentBuilder
 creator = documentAction . ActionInfoSetCreator
 
 page :: PageBuilderM a -> DocumentBuilder
-page (PageBuilderM userActions _) = documentAction $ ActionComposite actions
-  where
-    actions = ActionPage : userActions
+page (PageBuilderM actions _) =
+  documentAction $ ActionComposite $ ActionPage : actions
+
+pageTemplate :: PageBuilder -> PageBuilder -> DocumentBuilder
+pageTemplate (PageBuilderM actions1 _) (PageBuilderM actions2 _) =
+  page $ do
+    pageAction $ ActionComposite actions1
+    pageAction $ ActionComposite actions2
 
 font :: PdfStandardFont -> PageBuilder
 font = pageAction . ActionFont
@@ -73,6 +79,7 @@ moveDown :: PageBuilder
 moveDown = pageAction ActionMoveDown
 
 -----------------------------------------------
+
 buildPdfDoc :: UTCTime -> TimeZone -> DocumentBuilderM a -> PdfDocument
 buildPdfDoc now timeZone (DocumentBuilderM userActions _) =
   L.foldl

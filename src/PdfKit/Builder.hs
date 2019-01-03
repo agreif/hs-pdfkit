@@ -56,6 +56,7 @@ documentAction :: Action -> DocumentBuilder
 documentAction action = DocumentBuilderM [action] ()
 
 -----------------------------------------------
+
 data PageBuilderM a =
   PageBuilderM [Action]
                a

@@ -1,5 +1,13 @@
 module PdfKit
   ( PdfKit.Builder.PdfDocument(..)
+  , PdfKit.Builder.DocumentBuilder
+  , PdfKit.Builder.PageBuilder
+  -- , PdfKit.Builder.PageBuilderM(..)
+  -- , PdfKit.Builder.DocumentBuilderM(..)
+  -- , PdfKit.Builder.Action(..)
+  , PdfKit.Builder.documentAction
+  , PdfKit.Builder.pageAction
+  , PdfKit.Api.pageTemplate
   , PdfKit.Api.producer
   , PdfKit.Api.creator
   , PdfKit.Api.page
