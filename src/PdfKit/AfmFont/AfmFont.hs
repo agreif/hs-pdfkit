@@ -23,8 +23,7 @@ data AfmFont = AfmFont
   , afmFontStdVW :: Double
   , afmFontCharMetrics :: [AfmCharMetric]
   , afmFontKernPairXs :: [AfmKernPairX]
-  }
-  deriving Eq
+  } deriving (Eq)
 
 data AfmCharMetric = AfmCharMetric
   { afmCharMetricCharCode :: Double
@@ -32,12 +31,10 @@ data AfmCharMetric = AfmCharMetric
   , afmCharMetricCharName :: Text
   , afmCharMetricBBox :: (Double, Double, Double, Double)
   , afmCharMetricLigatures :: [(Text, Text)]
-  }
-  deriving Eq
+  } deriving (Eq)
 
 data AfmKernPairX = AfmKernPairX
   { afmKernPairXChar1Name :: Text
   , afmKernPairXChar2Name :: Text
   , afmKernPairXAmount :: Double
-  }
-  deriving Eq
+  } deriving (Eq)

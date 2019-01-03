@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+
 module PdfKit.Helper where
 
 import Data.Text (Text)
@@ -19,10 +20,10 @@ maybeIntToText Nothing = ""
 maybeIntToText (Just i) = T.pack . show $ i
 
 intToText :: Int -> Text
-intToText i = T.pack . show $ i
+intToText = T.pack . show
 
 doubleToText :: Double -> Text
-doubleToText x = T.pack $ show $ x
+doubleToText = T.pack . show
 
 ref :: Int -> Text
 ref objId = T.concat [intToText objId, " 0 R"]

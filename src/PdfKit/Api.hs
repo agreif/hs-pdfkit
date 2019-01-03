@@ -1,29 +1,27 @@
-{-# LANGUAGE OverloadedStrings #-}
 module PdfKit.Api
-    ( PdfKit.Api.producer
-    , PdfKit.Api.creator
-    , PdfKit.Api.page
-    , PdfKit.Api.font
-    , PdfKit.Api.fontSize
-    , PdfKit.Api.pageSize
-    , PdfKit.Api.pageSizeCustom
-    , PdfKit.Api.layout
-    , PdfKit.Api.margin
-    , PdfKit.Api.margins
-    , PdfKit.Api.textAt
-    , PdfKit.Api.text
-    , PdfKit.Api.moveDown
-    , PdfKit.Api.buildPdfDoc
-    , PdfKit.Api.encodePdf
-    , PdfKit.Api.encodePdf'
-    ) where
+  ( PdfKit.Api.producer
+  , PdfKit.Api.creator
+  , PdfKit.Api.page
+  , PdfKit.Api.font
+  , PdfKit.Api.fontSize
+  , PdfKit.Api.pageSize
+  , PdfKit.Api.pageSizeCustom
+  , PdfKit.Api.layout
+  , PdfKit.Api.margin
+  , PdfKit.Api.margins
+  , PdfKit.Api.textAt
+  , PdfKit.Api.text
+  , PdfKit.Api.moveDown
+  , PdfKit.Api.buildPdfDoc
+  , PdfKit.Api.encodePdf
+  , PdfKit.Api.encodePdf'
+  ) where
 
-import Data.Text (Text)
-import qualified Data.Text as T
-import qualified Data.Text.Encoding as T
 import Data.ByteString (ByteString)
-import qualified Data.List as L
 import qualified Data.ByteString.Char8 as B8
+import qualified Data.List as L
+import Data.Text (Text)
+import qualified Data.Text.Encoding as T
 import Data.Time
 import PdfKit.Builder
 
@@ -36,7 +34,7 @@ creator = documentAction . ActionInfoSetCreator
 page :: PageBuilderM a -> DocumentBuilder
 page (PageBuilderM userActions _) = documentAction $ ActionComposite actions
   where
-    actions = [ActionPage] ++ userActions
+    actions = ActionPage : userActions
 
 font :: PdfStandardFont -> PageBuilder
 font = pageAction . ActionFont
@@ -75,16 +73,14 @@ moveDown :: PageBuilder
 moveDown = pageAction ActionMoveDown
 
 -----------------------------------------------
-
 buildPdfDoc :: UTCTime -> TimeZone -> DocumentBuilderM a -> PdfDocument
 buildPdfDoc now timeZone (DocumentBuilderM userActions _) =
   L.foldl
-  (\pdfDoc action -> execute action pdfDoc)
-  (initialPdfDocument now timeZone)
-  (userActions ++ [ActionFinalize])
+    (flip execute)
+    (initialPdfDocument now timeZone)
+    (userActions ++ [ActionFinalize])
 
 -----------------------------------------------
-
 encodePdf :: PdfDocument -> ByteString
 encodePdf pdfDoc = B8.unlines $ toByteStringLines pdfDoc
 
