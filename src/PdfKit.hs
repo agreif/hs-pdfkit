@@ -7,10 +7,10 @@ module PdfKit
   -- , PdfKit.Builder.Action(..)
   , PdfKit.Builder.documentAction
   , PdfKit.Builder.pageAction
-  , PdfKit.Api.pageTemplate
   , PdfKit.Api.producer
   , PdfKit.Api.creator
   , PdfKit.Api.page
+  , PdfKit.Api.pageTemplate
   , PdfKit.Api.font
   , PdfKit.Api.fontSize
   , PdfKit.Api.pageSize
