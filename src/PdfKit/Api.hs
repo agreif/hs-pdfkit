@@ -14,6 +14,7 @@ module PdfKit.Api
   , PdfKit.Api.textPos
   , PdfKit.Api.textColorRgb
   , PdfKit.Api.textColorCmyk
+  , PdfKit.Api.textFillOpacity
   , PdfKit.Api.text
   , PdfKit.Api.textTemplate
   , PdfKit.Api.content
@@ -83,6 +84,9 @@ textColorRgb r g b = textAction $ ActionTextColor $ PdfColorRgb r g b
 
 textColorCmyk :: Double -> Double -> Double -> Double -> PdfTextBuilder
 textColorCmyk c m y k = textAction $ ActionTextColor $ PdfColorCmyk c m y k
+
+textFillOpacity :: Double -> PdfTextBuilder
+textFillOpacity = textAction . ActionTextFillOpacity
 
 content :: Text -> PdfTextBuilder
 content = textAction . ActionTextContent

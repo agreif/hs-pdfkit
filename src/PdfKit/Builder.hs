@@ -274,7 +274,7 @@ data PdfExtGState = PdfExtGState
   { pdfExtGStateObjId :: Int
   , pdfExtGStateName :: Text
   , pdfExtGStateFillOpacity :: Maybe Double
-  }
+  } deriving (Eq)
 
 instance ToJSON PdfExtGState where
   toJSON o =
@@ -297,7 +297,7 @@ instance ToByteStringLines PdfExtGState where
     , T.encodeUtf8 "/Type /ExtGState"
     ] ++
     (case pdfExtGStateFillOpacity pdfExtGState of
-       Just x -> [T.encodeUtf8 $ T.concat ["/ca /", doubleToText x]]
+       Just x -> [T.encodeUtf8 $ T.concat ["/ca ", doubleToText x]]
        _ -> []) ++
     [T.encodeUtf8 ">>", T.encodeUtf8 "endobj"]
 
@@ -486,12 +486,21 @@ instance ToByteStringLines (PdfContents, PdfPage, PdfDocument) where
                  (case pdfTextColor pdfText of
                     Just (PdfColorRgb r g b) ->
                       [ "/DeviceRGB cs"
-                      , T.intercalate " " $ L.map doubleToText [r, g, b] ++ ["scn"]
+                      , T.intercalate " " $
+                        L.map doubleToText [r, g, b] ++ ["scn"]
                       ]
                     Just (PdfColorCmyk c m y k) ->
                       [ "/DeviceCMYK cs"
-                      , T.intercalate " " $ L.map doubleToText [c, m, y, k] ++ ["scn"]
+                      , T.intercalate " " $
+                        L.map doubleToText [c, m, y, k] ++ ["scn"]
                       ]
+                    _ -> []) ++
+                 (case pdfTextFillOpacity pdfText of
+                    Just fillOpacity ->
+                      case findPdfExtGState fillOpacity pdfDoc of
+                        Just pdfExtGState ->
+                          [T.concat ["/", pdfExtGStateName pdfExtGState, " gs"]]
+                        _ -> []
                     _ -> []) ++
                  [ translatePos pdfText
                  , T.concat
@@ -535,7 +544,6 @@ instance ToByteStringLines (PdfContents, PdfPage, PdfDocument) where
       streamLength :: Int
       streamLength = BS.length $ T.encodeUtf8 $ T.unlines streamTextLines
 
-
 data PdfColor
   = PdfColorRgb { pdfColorRgbR :: Double
                 , pdfColorRgbG :: Double
@@ -559,6 +567,7 @@ data PdfText = PdfText
   , pdfTextStandardFont :: Maybe PdfStandardFont
   , pdfTextFontSize :: Maybe Double
   , pdfTextColor :: Maybe PdfColor
+  , pdfTextFillOpacity :: Maybe Double
   }
 
 instance ToJSON PdfText where
@@ -570,6 +579,7 @@ instance ToJSON PdfText where
       , "standardFont" .= pdfTextStandardFont o
       , "fontSize" .= pdfTextFontSize o
       , "color" .= pdfTextColor o
+      , "opacity" .= pdfTextFillOpacity o
       ]
 
 -----------------------------------------------
@@ -960,6 +970,12 @@ findPdfFont stdFont pdfDoc =
     (\pdfFont -> pdfFontStandardFont pdfFont == stdFont)
     (pdfDocumentFonts pdfDoc)
 
+findPdfExtGState :: Double -> PdfDocument -> Maybe PdfExtGState
+findPdfExtGState fillOpacity pdfDoc =
+  L.find
+    (\pdfExtGState -> pdfExtGStateFillOpacity pdfExtGState == Just fillOpacity)
+    (pdfDocumentExtGStates pdfDoc)
+
 -----------------------------------------------
 pdfPagesTuple :: PdfDocument -> (PdfPages, [PdfPage], PdfPage)
 pdfPagesTuple pdfDoc = (pdfPages, initPages, lastPage)
@@ -997,7 +1013,8 @@ pdfDocumentByteStringLineBlocks pdfDoc =
          acc)
       []
       (pdfPagesKids $ pdfDocumentPages pdfDoc) ++
-    L.map toByteStringLines (pdfDocumentFonts pdfDoc)
+    L.map toByteStringLines (pdfDocumentFonts pdfDoc) ++
+    L.map toByteStringLines (pdfDocumentExtGStates pdfDoc)
   , toByteStringLines (pdfDocumentXref pdfDoc, pdfDoc) ++
     toByteStringLines (pdfDocumentTrailer pdfDoc, pdfDoc) ++
     [ T.encodeUtf8 "startxref"
@@ -1029,6 +1046,7 @@ data Action
   | ActionTextPos Double
                   Double
   | ActionTextColor PdfColor
+  | ActionTextFillOpacity Double
   | ActionMoveDown
   | ActionComposite [Action]
 
@@ -1180,6 +1198,7 @@ instance IsExecutableAction Action where
                                   , pdfTextStandardFont = Nothing
                                   , pdfTextFontSize = Nothing
                                   , pdfTextColor = Nothing
+                                  , pdfTextFillOpacity = Nothing
                                   }
                               ]
                           }
@@ -1313,6 +1332,53 @@ instance IsExecutableAction Action where
             }
       }
     where
+      (pdfPages, initPages, lastPage) = pdfPagesTuple pdfDoc
+      (initTexts, lastText) = pdfTextsTuple lastPage
+  execute (ActionTextFillOpacity fillOpacity) pdfDoc =
+    pdfDoc
+      { pdfDocumentNextObjId = nextObjId
+      , pdfDocumentExtGStates =
+          L.nub $ pdfDocumentExtGStates pdfDoc ++ [pdfExtGState]
+      , pdfDocumentPages =
+          pdfPages
+            { pdfPagesKids =
+                initPages ++
+                [ lastPage
+                    { pdfPageResources =
+                        (pdfPageResources lastPage)
+                          { pdfResourcesExtGStates =
+                              L.nub $
+                              (pdfResourcesExtGStates . pdfPageResources $
+                               lastPage) ++
+                              [pdfExtGState]
+                          }
+                    , pdfPageContents =
+                        (pdfPageContents lastPage)
+                          { pdfContentsTexts =
+                              initTexts ++
+                              [lastText {pdfTextFillOpacity = Just fillOpacity}]
+                          }
+                    }
+                ]
+            }
+      }
+    where
+      extGStateObjId = pdfDocumentNextObjId pdfDoc
+      maybePdfExtGState = findPdfExtGState fillOpacity pdfDoc
+      extGStateAlreadyAdded = M.isJust maybePdfExtGState
+      pdfExtGState =
+        case maybePdfExtGState of
+          Just pdfExtGState' -> pdfExtGState'
+          _ ->
+            PdfExtGState
+              { pdfExtGStateObjId = extGStateObjId
+              , pdfExtGStateName = T.concat ["GS", intToText extGStateObjId]
+              , pdfExtGStateFillOpacity = Just fillOpacity
+              }
+      nextObjId =
+        if extGStateAlreadyAdded
+          then pdfDocumentNextObjId pdfDoc
+          else pdfDocumentNextObjId pdfDoc + 1
       (pdfPages, initPages, lastPage) = pdfPagesTuple pdfDoc
       (initTexts, lastText) = pdfTextsTuple lastPage
   execute ActionMoveDown pdfDoc =

@@ -26,6 +26,7 @@ module PdfKit
   , PdfKit.Api.textPos
   , PdfKit.Api.textColorRgb
   , PdfKit.Api.textColorCmyk
+  , PdfKit.Api.textFillOpacity
   , PdfKit.Api.textTemplate
   , PdfKit.Api.content
   , PdfKit.Api.moveDown
