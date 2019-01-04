@@ -24,6 +24,8 @@ module PdfKit
   , PdfKit.Api.margins
   , PdfKit.Api.text
   , PdfKit.Api.textPos
+  , PdfKit.Api.textColorRgb
+  , PdfKit.Api.textColorCmyk
   , PdfKit.Api.textTemplate
   , PdfKit.Api.content
   , PdfKit.Api.moveDown

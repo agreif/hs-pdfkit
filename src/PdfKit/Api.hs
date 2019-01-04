@@ -12,6 +12,8 @@ module PdfKit.Api
   , PdfKit.Api.margin
   , PdfKit.Api.margins
   , PdfKit.Api.textPos
+  , PdfKit.Api.textColorRgb
+  , PdfKit.Api.textColorCmyk
   , PdfKit.Api.text
   , PdfKit.Api.textTemplate
   , PdfKit.Api.content
@@ -75,6 +77,12 @@ textTemplate (PdfTextBuilderM actions1 _) (PdfTextBuilderM actions2 _) =
 
 textPos :: Double -> Double -> PdfTextBuilder
 textPos x y = textAction $ ActionTextPos x y
+
+textColorRgb :: Double -> Double -> Double -> PdfTextBuilder
+textColorRgb r g b = textAction $ ActionTextColor $ PdfColorRgb r g b
+
+textColorCmyk :: Double -> Double -> Double -> Double -> PdfTextBuilder
+textColorCmyk c m y k = textAction $ ActionTextColor $ PdfColorCmyk c m y k
 
 content :: Text -> PdfTextBuilder
 content = textAction . ActionTextContent

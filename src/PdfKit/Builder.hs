@@ -120,6 +120,7 @@ data PdfDocument = PdfDocument
   , pdfDocumentTrailer :: PdfTrailer
   , pdfDocumentXref :: PdfXref
   , pdfDocumentStartXref :: Maybe Int
+  , pdfDocumentExtGStates :: [PdfExtGState]
   }
 
 instance ToJSON PdfDocument where
@@ -134,6 +135,7 @@ instance ToJSON PdfDocument where
       , "trailer" .= pdfDocumentTrailer o
       , "xref" .= pdfDocumentXref o
       , "startxref" .= pdfDocumentStartXref o
+      , "extGStates" .= pdfDocumentExtGStates o
       ]
 
 instance ToByteStringLines PdfDocument where
@@ -166,9 +168,10 @@ initialPdfDocument =
     , pdfDocumentXref = PdfXref {pdfXrefPositions = []}
     , pdfDocumentTrailer = PdfTrailer {pdfTrailerSize = Nothing}
     , pdfDocumentStartXref = Nothing
+    , pdfDocumentExtGStates = []
     }
   where
-    version = "1.3"
+    version = "1.4"
     infoObjId = 1
     rootObjId = 2
     pagesObjId = 3
@@ -267,6 +270,38 @@ instance ToByteStringLines PdfPages where
     ]
 
 -----------------------------------------------
+data PdfExtGState = PdfExtGState
+  { pdfExtGStateObjId :: Int
+  , pdfExtGStateName :: Text
+  , pdfExtGStateFillOpacity :: Maybe Double
+  }
+
+instance ToJSON PdfExtGState where
+  toJSON o =
+    object
+      [ "objId" .= pdfExtGStateObjId o
+      , "name" .= pdfExtGStateName o
+      , "fillOpacity" .= pdfExtGStateFillOpacity o
+      ]
+
+instance ToByteStringLines PdfExtGState where
+  toByteStringLines pdfExtGState =
+    [ T.encodeUtf8 $
+      T.concat [T.pack $ show $ pdfExtGStateObjId pdfExtGState, " 0 obj"]
+    , T.encodeUtf8 $
+      T.concat
+        [ "% ------------------------------------------------------ ExtGState "
+        , intToText $ pdfExtGStateObjId pdfExtGState
+        ]
+    , T.encodeUtf8 "<<"
+    , T.encodeUtf8 "/Type /ExtGState"
+    ] ++
+    (case pdfExtGStateFillOpacity pdfExtGState of
+       Just x -> [T.encodeUtf8 $ T.concat ["/ca /", doubleToText x]]
+       _ -> []) ++
+    [T.encodeUtf8 ">>", T.encodeUtf8 "endobj"]
+
+-----------------------------------------------
 data PdfFont = PdfFont
   { pdfFontObjId :: Int
   , pdfFontName :: Text
@@ -292,27 +327,29 @@ instance ToByteStringLines PdfFont where
     , T.encodeUtf8 "<<"
     , T.encodeUtf8 "/Type /Font"
     , T.encodeUtf8 $ T.concat ["/Name /", pdfFontName pdfFont]
-    , T.encodeUtf8 $
-      T.concat ["/BaseFont /", pdfStandardFontBaseFont standardFont]
-    , T.encodeUtf8 $
-      T.concat ["/Subtype /", pdfStandardFontSubtype standardFont]
-    , T.encodeUtf8 $
-      T.concat ["/Encoding /", pdfStandardFontEncoding standardFont]
+    , T.encodeUtf8 $ T.concat ["/BaseFont /", pdfStandardFontBaseFont stdFont]
+    , T.encodeUtf8 $ T.concat ["/Subtype /", pdfStandardFontSubtype stdFont]
+    , T.encodeUtf8 $ T.concat ["/Encoding /", pdfStandardFontEncoding stdFont]
     , T.encodeUtf8 ">>"
     , T.encodeUtf8 "endobj"
     ]
     where
-      standardFont = pdfFontStandardFont pdfFont
+      stdFont = pdfFontStandardFont pdfFont
 
 -----------------------------------------------
 data PdfResources = PdfResources
   { pdfResourcesObjId :: Int
   , pdfResourcesFonts :: [PdfFont]
+  , pdfResourcesExtGStates :: [PdfExtGState]
   }
 
 instance ToJSON PdfResources where
   toJSON o =
-    object ["objId" .= pdfResourcesObjId o, "fonts" .= pdfResourcesFonts o]
+    object
+      [ "objId" .= pdfResourcesObjId o
+      , "fonts" .= pdfResourcesFonts o
+      , "extGStates" .= pdfResourcesExtGStates o
+      ]
 
 instance ToByteStringLines PdfResources where
   toByteStringLines pdfResources =
@@ -336,6 +373,21 @@ instance ToByteStringLines PdfResources where
               T.concat
                 ["/", pdfFontName pdfFont, " ", ref $ pdfFontObjId pdfFont])
            pdfFonts ++
+         [T.encodeUtf8 ">>"]) ++
+    (case pdfResourcesExtGStates pdfResources of
+       [] -> []
+       pdfExtGStates ->
+         [T.encodeUtf8 "/ExtGState <<"] ++
+         L.map
+           (\pdfExtGState ->
+              T.encodeUtf8 $
+              T.concat
+                [ "/"
+                , pdfExtGStateName pdfExtGState
+                , " "
+                , ref $ pdfExtGStateObjId pdfExtGState
+                ])
+           pdfExtGStates ++
          [T.encodeUtf8 ">>"]) ++
     [T.encodeUtf8 ">>", T.encodeUtf8 "endobj"]
 
@@ -430,10 +482,18 @@ instance ToByteStringLines (PdfContents, PdfPage, PdfDocument) where
              acc ++
              case pdfTextText pdfText of
                Just t ->
-                 [ "q"
-                 , translateOrigin
-                 , "BT"
-                 , translatePos pdfText
+                 ["q", translateOrigin, "BT"] ++
+                 (case pdfTextColor pdfText of
+                    Just (PdfColorRgb r g b) ->
+                      [ "/DeviceRGB cs"
+                      , T.intercalate " " $ L.map doubleToText [r, g, b] ++ ["scn"]
+                      ]
+                    Just (PdfColorCmyk c m y k) ->
+                      [ "/DeviceCMYK cs"
+                      , T.intercalate " " $ L.map doubleToText [c, m, y, k] ++ ["scn"]
+                      ]
+                    _ -> []) ++
+                 [ translatePos pdfText
                  , T.concat
                      [ "/"
                      , case pdfTextStandardFont pdfText of
@@ -475,6 +535,22 @@ instance ToByteStringLines (PdfContents, PdfPage, PdfDocument) where
       streamLength :: Int
       streamLength = BS.length $ T.encodeUtf8 $ T.unlines streamTextLines
 
+
+data PdfColor
+  = PdfColorRgb { pdfColorRgbR :: Double
+                , pdfColorRgbG :: Double
+                , pdfColorRgbB :: Double }
+  | PdfColorCmyk { pdfColorCmykC :: Double
+                 , pdfColorCmykM :: Double
+                 , pdfColorCmykY :: Double
+                 , pdfColorCmykK :: Double }
+
+instance ToJSON PdfColor where
+  toJSON o =
+    case o of
+      PdfColorRgb r g b -> object ["r" .= r, "g" .= g, "b" .= b]
+      PdfColorCmyk c m y k -> object ["c" .= c, "m" .= m, "y" .= y, "k" .= k]
+
 -----------------------------------------------
 data PdfText = PdfText
   { pdfTextText :: Maybe Text
@@ -482,6 +558,7 @@ data PdfText = PdfText
   , pdfTextY :: Double
   , pdfTextStandardFont :: Maybe PdfStandardFont
   , pdfTextFontSize :: Maybe Double
+  , pdfTextColor :: Maybe PdfColor
   }
 
 instance ToJSON PdfText where
@@ -492,6 +569,7 @@ instance ToJSON PdfText where
       , "y" .= pdfTextY o
       , "standardFont" .= pdfTextStandardFont o
       , "fontSize" .= pdfTextFontSize o
+      , "color" .= pdfTextColor o
       ]
 
 -----------------------------------------------
@@ -950,6 +1028,7 @@ data Action
   | ActionTextFontSize Double
   | ActionTextPos Double
                   Double
+  | ActionTextColor PdfColor
   | ActionMoveDown
   | ActionComposite [Action]
 
@@ -1003,6 +1082,7 @@ instance IsExecutableAction Action where
                         PdfResources
                           { pdfResourcesObjId = resourcesObjId
                           , pdfResourcesFonts = []
+                          , pdfResourcesExtGStates = []
                           }
                     , pdfPageContents =
                         PdfContents
@@ -1099,6 +1179,7 @@ instance IsExecutableAction Action where
                                   , pdfTextY = y
                                   , pdfTextStandardFont = Nothing
                                   , pdfTextFontSize = Nothing
+                                  , pdfTextColor = Nothing
                                   }
                               ]
                           }
@@ -1206,6 +1287,26 @@ instance IsExecutableAction Action where
                           { pdfContentsTexts =
                               initTexts ++
                               [lastText {pdfTextX = x, pdfTextY = y}]
+                          }
+                    }
+                ]
+            }
+      }
+    where
+      (pdfPages, initPages, lastPage) = pdfPagesTuple pdfDoc
+      (initTexts, lastText) = pdfTextsTuple lastPage
+  execute (ActionTextColor color) pdfDoc =
+    pdfDoc
+      { pdfDocumentPages =
+          pdfPages
+            { pdfPagesKids =
+                initPages ++
+                [ lastPage
+                    { pdfPageContents =
+                        (pdfPageContents lastPage)
+                          { pdfContentsTexts =
+                              initTexts ++
+                              [lastText {pdfTextColor = Just color}]
                           }
                     }
                 ]
