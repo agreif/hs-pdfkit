@@ -4,7 +4,7 @@
 module PdfKit.Builder where
 
 import Control.Monad
-import Data.Aeson
+import Data.Aeson (ToJSON, (.=), object, toJSON)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as B8
@@ -17,8 +17,6 @@ import qualified Data.Text.Encoding as T
 import Data.Time
 import PdfKit.AfmFont.AfmFont
 import PdfKit.Helper
-import PdfKit.PageSize
-import PdfKit.StandardFont
 
 -----------------------------------------------
 data PdfDocumentBuilderM a =
@@ -532,44 +530,6 @@ instance ToByteStringLines (PdfContents, PdfPage, PdfDocument) where
       streamLength :: Int
       streamLength = BS.length $ T.encodeUtf8 $ T.unlines streamTextLines
 
-data PdfColor
-  = PdfColorRgb { pdfColorRgbR :: Double
-                , pdfColorRgbG :: Double
-                , pdfColorRgbB :: Double }
-  | PdfColorCmyk { pdfColorCmykC :: Double
-                 , pdfColorCmykM :: Double
-                 , pdfColorCmykY :: Double
-                 , pdfColorCmykK :: Double }
-
-instance ToJSON PdfColor where
-  toJSON o =
-    case o of
-      PdfColorRgb r g b -> object ["r" .= r, "g" .= g, "b" .= b]
-      PdfColorCmyk c m y k -> object ["c" .= c, "m" .= m, "y" .= y, "k" .= k]
-
------------------------------------------------
-data PdfText = PdfText
-  { pdfTextText :: Maybe Text
-  , pdfTextX :: Double
-  , pdfTextY :: Double
-  , pdfTextStandardFont :: Maybe PdfStandardFont
-  , pdfTextFontSize :: Maybe Double
-  , pdfTextColor :: Maybe PdfColor
-  , pdfTextFillOpacity :: Maybe Double
-  }
-
-instance ToJSON PdfText where
-  toJSON o =
-    object
-      [ "text" .= pdfTextText o
-      , "x" .= pdfTextX o
-      , "y" .= pdfTextY o
-      , "standardFont" .= pdfTextStandardFont o
-      , "fontSize" .= pdfTextFontSize o
-      , "color" .= pdfTextColor o
-      , "opacity" .= pdfTextFillOpacity o
-      ]
-
 -----------------------------------------------
 newtype PdfXref = PdfXref
   { pdfXrefPositions :: [Int]
@@ -622,47 +582,6 @@ instance ToByteStringLines (PdfTrailer, PdfDocument) where
     ]
 
 -----------------------------------------------
-data PdfPageMargins = PdfPageMargins
-  { pdfPageMarginTop :: Double
-  , pdfPageMarginLeft :: Double
-  , pdfPageMarginBottom :: Double
-  , pdfPageMarginRight :: Double
-  }
-
-instance ToJSON PdfPageMargins where
-  toJSON o =
-    object
-      [ "top" .= pdfPageMarginTop o
-      , "left" .= pdfPageMarginLeft o
-      , "bottom" .= pdfPageMarginBottom o
-      , "right" .= pdfPageMarginRight o
-      ]
-
-defaultPageMargins :: PdfPageMargins
-defaultPageMargins = PdfPageMargins 72 72 72 72
-
------------------------------------------------
-data PdfPageLayout
-  = Portrait
-  | Landscape
-  deriving (Show)
-
-portrait :: PdfPageLayout
-portrait = Portrait
-
-landscape :: PdfPageLayout
-landscape = Landscape
-
------------------------------------------------
-data PdfPos = PdfPos
-  { pdfPosX :: Double
-  , pdfPosY :: Double
-  }
-
-instance ToJSON PdfPos where
-  toJSON o = object ["x" .= pdfPosX o, "y" .= pdfPosY o]
-
------------------------------------------------
 dy :: PdfStandardFont -> Double -> Double
 dy stdFont size =
   case maybeAscender of
@@ -689,6 +608,9 @@ fontLineHeight stdFont size =
     (top, bottom) =
       let (_, b, _, t) = afmFontFontBBox afmFont
        in (t, b)
+
+defaultPageMargins :: PdfPageMargins
+defaultPageMargins = PdfPageMargins 72 72 72 72
 
 defaultFont :: PdfStandardFont
 defaultFont = helvetica

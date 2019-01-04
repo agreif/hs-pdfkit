@@ -31,8 +31,7 @@ import Data.Text (Text)
 import qualified Data.Text.Encoding as T
 import Data.Time
 import PdfKit.Builder
-import PdfKit.PageSize
-import PdfKit.StandardFont
+import PdfKit.Helper
 
 producer :: Text -> PdfDocumentBuilder
 producer = documentAction . ActionInfoSetProducer
