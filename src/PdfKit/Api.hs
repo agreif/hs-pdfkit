@@ -31,6 +31,8 @@ import Data.Text (Text)
 import qualified Data.Text.Encoding as T
 import Data.Time
 import PdfKit.Builder
+import PdfKit.PageSize
+import PdfKit.StandardFont
 
 producer :: Text -> PdfDocumentBuilder
 producer = documentAction . ActionInfoSetProducer
@@ -39,7 +41,8 @@ creator :: Text -> PdfDocumentBuilder
 creator = documentAction . ActionInfoSetCreator
 
 creationDate :: UTCTime -> TimeZone -> PdfDocumentBuilder
-creationDate now timeZone = documentAction $ ActionInfoSetCreationDate now timeZone
+creationDate now timeZone =
+  documentAction $ ActionInfoSetCreationDate now timeZone
 
 page :: PdfPageBuilderM a -> PdfDocumentBuilder
 page (PdfPageBuilderM actions _) =
@@ -101,7 +104,6 @@ moveDown :: PdfPageBuilder
 moveDown = pageAction ActionMoveDown
 
 -----------------------------------------------
-
 buildPdfDoc :: PdfDocumentBuilderM a -> PdfDocument
 buildPdfDoc (PdfDocumentBuilderM userActions _) =
   L.foldl (flip execute) initialPdfDocument (userActions ++ [ActionFinalize])

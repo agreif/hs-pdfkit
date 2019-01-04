@@ -2,7 +2,7 @@
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 6088bcf6f057bd362c6090569ff73d5019b0615f98724789e6d7d6a46653a018
+-- hash: edc17d12213d2b8b3178167550db65f5300501be42e52d4ec557592c169354d3
 
 name:           hs-pdfkit
 version:        0.0.1
@@ -51,6 +51,8 @@ library
       PdfKit.Api
       PdfKit.Builder
       PdfKit.Helper
+      PdfKit.PageSize
+      PdfKit.StandardFont
   other-modules:
       Paths_hs_pdfkit
   hs-source-dirs:
