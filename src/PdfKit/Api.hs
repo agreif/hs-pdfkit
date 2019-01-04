@@ -1,6 +1,7 @@
 module PdfKit.Api
   ( PdfKit.Api.producer
   , PdfKit.Api.creator
+  , PdfKit.Api.creationDate
   , PdfKit.Api.page
   , PdfKit.Api.pageTemplate
   , PdfKit.Api.font
@@ -33,6 +34,9 @@ producer = documentAction . ActionInfoSetProducer
 
 creator :: Text -> PdfDocumentBuilder
 creator = documentAction . ActionInfoSetCreator
+
+creationDate :: UTCTime -> TimeZone -> PdfDocumentBuilder
+creationDate now timeZone = documentAction $ ActionInfoSetCreationDate now timeZone
 
 page :: PdfPageBuilderM a -> PdfDocumentBuilder
 page (PdfPageBuilderM actions _) =
@@ -86,11 +90,11 @@ moveDown = pageAction ActionMoveDown
 
 -----------------------------------------------
 
-buildPdfDoc :: UTCTime -> TimeZone -> PdfDocumentBuilderM a -> PdfDocument
-buildPdfDoc now timeZone (PdfDocumentBuilderM userActions _) =
+buildPdfDoc :: PdfDocumentBuilderM a -> PdfDocument
+buildPdfDoc (PdfDocumentBuilderM userActions _) =
   L.foldl
     (flip execute)
-    (initialPdfDocument now timeZone)
+    initialPdfDocument
     (userActions ++ [ActionFinalize])
 
 -----------------------------------------------

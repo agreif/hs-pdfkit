@@ -112,7 +112,6 @@ class IsExecutableAction a where
 data PdfDocument = PdfDocument
   { pdfDocumentVersion :: Text
   , pdfDocumentHeaderLines :: [ByteString]
-  , pdfDocumentCreationDate :: Text
   , pdfDocumentNextObjId :: Int
   , pdfDocumentInfo :: PdfInfo
   , pdfDocumentRoot :: PdfRoot
@@ -143,22 +142,21 @@ instance ToByteStringLines PdfDocument where
       (headerLines, objectBlocks, footerLines) =
         pdfDocumentByteStringLineBlocks pdfDoc
 
-initialPdfDocument :: UTCTime -> TimeZone -> PdfDocument
-initialPdfDocument now timeZone =
+initialPdfDocument :: PdfDocument
+initialPdfDocument =
   PdfDocument
     { pdfDocumentVersion = version
     , pdfDocumentHeaderLines =
         [ T.encodeUtf8 $ T.concat ["%PDF-", version]
         , B8.pack ['%', '\xff', '\xff', '\xff', '\xff']
         ]
-    , pdfDocumentCreationDate = creationDate
     , pdfDocumentNextObjId = nextObjId
     , pdfDocumentInfo =
         PdfInfo
           { pdfInfoObjId = infoObjId
           , pdfInfoProducer = "hs-pdfkit"
           , pdfInfoCreator = "hs-pdfkit"
-          , pdfInfoCreationDate = T.concat ["D:", creationDate, "Z"]
+          , pdfInfoCreationDate = Nothing
           }
     , pdfDocumentRoot =
         PdfRoot {pdfRootObjId = rootObjId, pdfRootPages = ref pagesObjId}
@@ -170,7 +168,6 @@ initialPdfDocument now timeZone =
     , pdfDocumentStartXref = Nothing
     }
   where
-    creationDate = T.pack $ formatLocalTime timeZone now
     version = "1.3"
     infoObjId = 1
     rootObjId = 2
@@ -182,7 +179,7 @@ data PdfInfo = PdfInfo
   { pdfInfoObjId :: Int
   , pdfInfoProducer :: Text
   , pdfInfoCreator :: Text
-  , pdfInfoCreationDate :: Text
+  , pdfInfoCreationDate :: Maybe Text
   }
 
 instance ToJSON PdfInfo where
@@ -205,11 +202,12 @@ instance ToByteStringLines PdfInfo where
     , T.encodeUtf8 "<<"
     , T.encodeUtf8 $ T.concat ["/Producer (", pdfInfoProducer pdfInfo, ")"]
     , T.encodeUtf8 $ T.concat ["/Creator (", pdfInfoCreator pdfInfo, ")"]
-    , T.encodeUtf8 $
-      T.concat ["/CreationDate (", pdfInfoCreationDate pdfInfo, ")"]
-    , T.encodeUtf8 ">>"
-    , T.encodeUtf8 "endobj"
-    ]
+    ] ++
+    (case pdfInfoCreationDate pdfInfo of
+       Just creationDate ->
+         [T.encodeUtf8 $ T.concat ["/CreationDate (D:", creationDate, "Z)"]]
+       _ -> []) ++
+    [T.encodeUtf8 ">>", T.encodeUtf8 "endobj"]
 
 -----------------------------------------------
 data PdfRoot = PdfRoot
@@ -933,6 +931,7 @@ pdfDocumentByteStringLineBlocks pdfDoc =
 data Action
   = ActionInfoSetProducer Text
   | ActionInfoSetCreator Text
+  | ActionInfoSetCreationDate UTCTime TimeZone
   | ActionFinalize
   | ActionPage
   | ActionPageSetSize PdfPageSize
@@ -962,6 +961,14 @@ instance IsExecutableAction Action where
     pdfDoc {pdfDocumentInfo = (pdfDocumentInfo pdfDoc) {pdfInfoProducer = text}}
   execute (ActionInfoSetCreator text) pdfDoc =
     pdfDoc {pdfDocumentInfo = (pdfDocumentInfo pdfDoc) {pdfInfoCreator = text}}
+  execute (ActionInfoSetCreationDate now timeZone) pdfDoc =
+    pdfDoc
+      { pdfDocumentInfo =
+          (pdfDocumentInfo pdfDoc)
+            {pdfInfoCreationDate = Just creationDate}
+      }
+    where
+      creationDate = T.pack $ formatLocalTime timeZone now
   execute ActionFinalize pdfDoc =
     pdfDoc
       { pdfDocumentXref = PdfXref {pdfXrefPositions = L.init positions}

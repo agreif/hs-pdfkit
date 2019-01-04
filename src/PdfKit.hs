@@ -12,6 +12,7 @@ module PdfKit
   , PdfKit.Builder.textAction
   , PdfKit.Api.producer
   , PdfKit.Api.creator
+  , PdfKit.Api.creationDate
   , PdfKit.Api.page
   , PdfKit.Api.pageTemplate
   , PdfKit.Api.font
