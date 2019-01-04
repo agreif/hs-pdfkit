@@ -92,10 +92,7 @@ moveDown = pageAction ActionMoveDown
 
 buildPdfDoc :: PdfDocumentBuilderM a -> PdfDocument
 buildPdfDoc (PdfDocumentBuilderM userActions _) =
-  L.foldl
-    (flip execute)
-    initialPdfDocument
-    (userActions ++ [ActionFinalize])
+  L.foldl (flip execute) initialPdfDocument (userActions ++ [ActionFinalize])
 
 -----------------------------------------------
 encodePdf :: PdfDocument -> ByteString
