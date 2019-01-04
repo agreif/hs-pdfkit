@@ -931,7 +931,8 @@ pdfDocumentByteStringLineBlocks pdfDoc =
 data Action
   = ActionInfoSetProducer Text
   | ActionInfoSetCreator Text
-  | ActionInfoSetCreationDate UTCTime TimeZone
+  | ActionInfoSetCreationDate UTCTime
+                              TimeZone
   | ActionFinalize
   | ActionPage
   | ActionPageSetSize PdfPageSize
@@ -964,8 +965,7 @@ instance IsExecutableAction Action where
   execute (ActionInfoSetCreationDate now timeZone) pdfDoc =
     pdfDoc
       { pdfDocumentInfo =
-          (pdfDocumentInfo pdfDoc)
-            {pdfInfoCreationDate = Just creationDate}
+          (pdfDocumentInfo pdfDoc) {pdfInfoCreationDate = Just creationDate}
       }
     where
       creationDate = T.pack $ formatLocalTime timeZone now
