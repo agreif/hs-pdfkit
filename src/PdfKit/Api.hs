@@ -10,8 +10,10 @@ module PdfKit.Api
   , PdfKit.Api.layout
   , PdfKit.Api.margin
   , PdfKit.Api.margins
-  , PdfKit.Api.textAt
+  , PdfKit.Api.textPos
   , PdfKit.Api.text
+  , PdfKit.Api.textTemplate
+  , PdfKit.Api.content
   , PdfKit.Api.moveDown
   , PdfKit.Api.buildPdfDoc
   , PdfKit.Api.encodePdf
@@ -26,62 +28,66 @@ import qualified Data.Text.Encoding as T
 import Data.Time
 import PdfKit.Builder
 
-producer :: Text -> DocumentBuilder
+producer :: Text -> PdfDocumentBuilder
 producer = documentAction . ActionInfoSetProducer
 
-creator :: Text -> DocumentBuilder
+creator :: Text -> PdfDocumentBuilder
 creator = documentAction . ActionInfoSetCreator
 
-page :: PageBuilderM a -> DocumentBuilder
-page (PageBuilderM actions _) =
+page :: PdfPageBuilderM a -> PdfDocumentBuilder
+page (PdfPageBuilderM actions _) =
   documentAction $ ActionComposite $ ActionPage : actions
 
-pageTemplate :: PageBuilder -> PageBuilder -> DocumentBuilder
-pageTemplate (PageBuilderM actions1 _) (PageBuilderM actions2 _) =
+pageTemplate :: PdfPageBuilder -> PdfPageBuilder -> PdfDocumentBuilder
+pageTemplate (PdfPageBuilderM actions1 _) (PdfPageBuilderM actions2 _) =
   page $ do
     pageAction $ ActionComposite actions1
     pageAction $ ActionComposite actions2
 
-font :: PdfStandardFont -> PageBuilder
-font = pageAction . ActionFont
-
-fontSize :: Double -> PageBuilder
-fontSize = pageAction . ActionFontSetSize
-
-pageSize :: PdfPageSize -> PageBuilder
+pageSize :: PdfPageSize -> PdfPageBuilder
 pageSize = pageAction . ActionPageSetSize
 
-pageSizeCustom :: Double -> Double -> PageBuilder
+pageSizeCustom :: Double -> Double -> PdfPageBuilder
 pageSizeCustom w h = pageAction $ ActionPageSetSizeCustom w h
 
-layout :: PdfPageLayout -> PageBuilder
+layout :: PdfPageLayout -> PdfPageBuilder
 layout = pageAction . ActionPageSetLayout
 
-margin :: Double -> PageBuilder
+margin :: Double -> PdfPageBuilder
 margin = pageAction . ActionPageSetMargin
 
-margins :: Double -> Double -> Double -> Double -> PageBuilder
+margins :: Double -> Double -> Double -> Double -> PdfPageBuilder
 margins t l b r = pageAction $ ActionPageSetMargins t l b r
 
-textAt :: Text -> Double -> Double -> PageBuilder
-textAt t x y = do
-  pageAction ActionFontAddIfMissing
-  pageAction $ ActionTextAt t x y
-  pageAction ActionMoveDown
+text :: PdfTextBuilderM a -> PdfPageBuilder
+text (PdfTextBuilderM actions _) =
+  pageAction $ ActionComposite $ ActionText : actions ++ [ActionMoveDown]
 
-text :: Text -> PageBuilder
-text t = do
-  pageAction ActionFontAddIfMissing
-  pageAction $ ActionText t
-  pageAction ActionMoveDown
+textTemplate :: PdfTextBuilder -> PdfTextBuilder -> PdfPageBuilder
+textTemplate (PdfTextBuilderM actions1 _) (PdfTextBuilderM actions2 _) =
+  text $ do
+    textAction $ ActionComposite actions1
+    textAction $ ActionComposite actions2
 
-moveDown :: PageBuilder
+textPos :: Double -> Double -> PdfTextBuilder
+textPos x y = textAction $ ActionTextPos x y
+
+content :: Text -> PdfTextBuilder
+content = textAction . ActionTextContent
+
+font :: PdfStandardFont -> PdfTextBuilder
+font = textAction . ActionTextFont
+
+fontSize :: Double -> PdfTextBuilder
+fontSize = textAction . ActionTextFontSize
+
+moveDown :: PdfPageBuilder
 moveDown = pageAction ActionMoveDown
 
 -----------------------------------------------
 
-buildPdfDoc :: UTCTime -> TimeZone -> DocumentBuilderM a -> PdfDocument
-buildPdfDoc now timeZone (DocumentBuilderM userActions _) =
+buildPdfDoc :: UTCTime -> TimeZone -> PdfDocumentBuilderM a -> PdfDocument
+buildPdfDoc now timeZone (PdfDocumentBuilderM userActions _) =
   L.foldl
     (flip execute)
     (initialPdfDocument now timeZone)

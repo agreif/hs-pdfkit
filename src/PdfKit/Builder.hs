@@ -33,51 +33,73 @@ import PdfKit.AfmFont.ZapfDingbats
 import PdfKit.Helper
 
 -----------------------------------------------
-data DocumentBuilderM a =
-  DocumentBuilderM [Action]
-                   a
+data PdfDocumentBuilderM a =
+  PdfDocumentBuilderM [Action]
+                      a
 
-type DocumentBuilder = DocumentBuilderM ()
+type PdfDocumentBuilder = PdfDocumentBuilderM ()
 
-instance Functor DocumentBuilderM where
+instance Functor PdfDocumentBuilderM where
   fmap = liftM
 
-instance Applicative DocumentBuilderM where
+instance Applicative PdfDocumentBuilderM where
   pure = return
   (<*>) = ap
 
-instance Monad DocumentBuilderM where
-  return = DocumentBuilderM []
-  DocumentBuilderM actions1 a >>= f =
-    let DocumentBuilderM actions2 b = f a
-     in DocumentBuilderM (actions1 ++ actions2) b
+instance Monad PdfDocumentBuilderM where
+  return = PdfDocumentBuilderM []
+  PdfDocumentBuilderM actions1 a >>= f =
+    let PdfDocumentBuilderM actions2 b = f a
+     in PdfDocumentBuilderM (actions1 ++ actions2) b
 
-documentAction :: Action -> DocumentBuilder
-documentAction action = DocumentBuilderM [action] ()
+documentAction :: Action -> PdfDocumentBuilder
+documentAction action = PdfDocumentBuilderM [action] ()
 
 -----------------------------------------------
+data PdfPageBuilderM a =
+  PdfPageBuilderM [Action]
+                  a
 
-data PageBuilderM a =
-  PageBuilderM [Action]
-               a
+type PdfPageBuilder = PdfPageBuilderM ()
 
-type PageBuilder = PageBuilderM ()
-
-instance Functor PageBuilderM where
+instance Functor PdfPageBuilderM where
   fmap = liftM
 
-instance Applicative PageBuilderM where
+instance Applicative PdfPageBuilderM where
   pure = return
   (<*>) = ap
 
-instance Monad PageBuilderM where
-  return = PageBuilderM []
-  PageBuilderM actions1 a >>= f =
-    let PageBuilderM actions2 b = f a
-     in PageBuilderM (actions1 ++ actions2) b
+instance Monad PdfPageBuilderM where
+  return = PdfPageBuilderM []
+  PdfPageBuilderM actions1 a >>= f =
+    let PdfPageBuilderM actions2 b = f a
+     in PdfPageBuilderM (actions1 ++ actions2) b
 
-pageAction :: Action -> PageBuilder
-pageAction action = PageBuilderM [action] ()
+pageAction :: Action -> PdfPageBuilder
+pageAction action = PdfPageBuilderM [action] ()
+
+-----------------------------------------------
+data PdfTextBuilderM a =
+  PdfTextBuilderM [Action]
+                  a
+
+type PdfTextBuilder = PdfTextBuilderM ()
+
+instance Functor PdfTextBuilderM where
+  fmap = liftM
+
+instance Applicative PdfTextBuilderM where
+  pure = return
+  (<*>) = ap
+
+instance Monad PdfTextBuilderM where
+  return = PdfTextBuilderM []
+  PdfTextBuilderM actions1 a >>= f =
+    let PdfTextBuilderM actions2 b = f a
+     in PdfTextBuilderM (actions1 ++ actions2) b
+
+textAction :: Action -> PdfTextBuilder
+textAction action = PdfTextBuilderM [action] ()
 
 -----------------------------------------------
 class ToByteStringLines a where
@@ -328,8 +350,6 @@ data PdfPage = PdfPage
   , pdfPageResources :: PdfResources
   , pdfPageContents :: PdfContents
   , pdfPageCurrentPos :: PdfPos
-  , pdfPageCurrentFont :: PdfStandardFont
-  , pdfPageCurrentFontSize :: Double
   }
 
 instance ToJSON PdfPage where
@@ -346,8 +366,6 @@ instance ToJSON PdfPage where
       , "resources" .= pdfPageResources o
       , "contents" .= pdfPageContents o
       , "currentPos" .= pdfPageCurrentPos o
-      , "currentFont" .= pdfPageCurrentFont o
-      , "currentFontSize" .= pdfPageCurrentFontSize o
       ]
 
 instance ToByteStringLines (PdfPage, PdfDocument) where
@@ -412,39 +430,48 @@ instance ToByteStringLines (PdfContents, PdfPage, PdfDocument) where
         L.foldl
           (\acc pdfText ->
              acc ++
-             [ "q"
-             , translateOrigin
-             , "BT"
-             , translatePos pdfText
-             , T.concat
-                 [ "/"
-                 , case findPdfFont (pdfTextStandardFont pdfText) pdfDoc of
-                     Just pdfFont -> pdfFontName pdfFont
-                     _ -> ""
-                 , " "
-                 , doubleToText $ pdfTextFontSize pdfText
-                 , " Tf"
-                 ]
-             , T.concat
-                 [ "[<"
-                 , T.decodeUtf8 $
-                   H.hex $ B8.pack $ T.unpack $ pdfTextText pdfText
-                 , "> 0] TJ"
-                 ]
-             , "ET"
-             , "Q"
-             ] :: [Text])
-          [] $
-        pdfContentsTexts pdfContents
+             case pdfTextText pdfText of
+               Just t ->
+                 [ "q"
+                 , translateOrigin
+                 , "BT"
+                 , translatePos pdfText
+                 , T.concat
+                     [ "/"
+                     , case pdfTextStandardFont pdfText of
+                         Just stdFont ->
+                           case findPdfFont stdFont pdfDoc of
+                             Just pdfFont -> pdfFontName pdfFont
+                             _ -> ""
+                         _ -> ""
+                     , " "
+                     , case pdfTextFontSize pdfText of
+                         Just fontSize -> doubleToText fontSize
+                         _ -> ""
+                     , " Tf"
+                     ]
+                 , T.concat
+                     [ "[<"
+                     , T.decodeUtf8 $ H.hex $ B8.pack $ T.unpack t
+                     , "> 0] TJ"
+                     ]
+                 , "ET"
+                 , "Q"
+                 ] :: [Text]
+               _ -> [])
+          []
+          (pdfContentsTexts pdfContents)
       translateOrigin = T.concat ["1 0 0 -1 0 ", doubleToText pageHeight, " cm"]
       translatePos pdfText =
         T.concat
           [ "1 0 0 1 "
           , doubleToText $ pdfTextX pdfText
           , " "
-          , doubleToText $
-            pageHeight - pdfTextY pdfText -
-            dy (pdfTextStandardFont pdfText) (pdfTextFontSize pdfText)
+          , case (pdfTextStandardFont pdfText, pdfTextFontSize pdfText) of
+              (Just stdFont, Just fontSize) ->
+                doubleToText $
+                pageHeight - pdfTextY pdfText - dy stdFont fontSize
+              _ -> ""
           , " Tm"
           ]
       streamLength :: Int
@@ -452,11 +479,11 @@ instance ToByteStringLines (PdfContents, PdfPage, PdfDocument) where
 
 -----------------------------------------------
 data PdfText = PdfText
-  { pdfTextText :: Text
+  { pdfTextText :: Maybe Text
   , pdfTextX :: Double
   , pdfTextY :: Double
-  , pdfTextStandardFont :: PdfStandardFont
-  , pdfTextFontSize :: Double
+  , pdfTextStandardFont :: Maybe PdfStandardFont
+  , pdfTextFontSize :: Maybe Double
   }
 
 instance ToJSON PdfText where
@@ -486,7 +513,7 @@ instance ToByteStringLines (PdfXref, PdfDocument) where
       T.concat
         [ "0 "
         , case pdfTrailerSize $ pdfDocumentTrailer pdfDoc of
-            Just size -> intToText $ 1 + size
+            Just size -> intToText size
             _ -> ""
         ]
     , T.encodeUtf8 "0000000000 65535 f"
@@ -767,10 +794,6 @@ fontLineHeight stdFont size =
       let (_, b, _, t) = afmFontFontBBox afmFont
        in (t, b)
 
-currentLineHeight :: PdfPage -> Double
-currentLineHeight pdfPage =
-  fontLineHeight (pdfPageCurrentFont pdfPage) (pdfPageCurrentFontSize pdfPage)
-
 defaultFont :: PdfStandardFont
 defaultFont = helvetica
 
@@ -861,17 +884,6 @@ findPdfFont stdFont pdfDoc =
     (\pdfFont -> pdfFontStandardFont pdfFont == stdFont)
     (pdfDocumentFonts pdfDoc)
 
-currentPdfFont :: PdfDocument -> Maybe PdfFont
-currentPdfFont pdfDoc = findPdfFont (pdfPageCurrentFont lastPage) pdfDoc
-  where
-    (_, _, lastPage) = pdfPagesTuple pdfDoc
-
-currentPdfFontId :: PdfDocument -> Maybe Int
-currentPdfFontId pdfDoc =
-  case currentPdfFont pdfDoc of
-    Just pdfFont -> Just $ pdfFontObjId pdfFont
-    _ -> Nothing
-
 -----------------------------------------------
 pdfPagesTuple :: PdfDocument -> (PdfPages, [PdfPage], PdfPage)
 pdfPagesTuple pdfDoc = (pdfPages, initPages, lastPage)
@@ -879,6 +891,13 @@ pdfPagesTuple pdfDoc = (pdfPages, initPages, lastPage)
     pdfPages = pdfDocumentPages pdfDoc
     initPages = L.init $ pdfPagesKids pdfPages
     lastPage = L.last $ pdfPagesKids pdfPages
+
+pdfTextsTuple :: PdfPage -> ([PdfText], PdfText)
+pdfTextsTuple pdfPage = (initTexts, lastText)
+  where
+    pdfTexts = pdfContentsTexts $ pdfPageContents pdfPage
+    initTexts = L.init pdfTexts
+    lastText = L.last pdfTexts
 
 applyLayout :: PdfPageSize -> PdfPageLayout -> PdfPageSize
 applyLayout size Portrait = size
@@ -915,9 +934,6 @@ data Action
   = ActionInfoSetProducer Text
   | ActionInfoSetCreator Text
   | ActionFinalize
-  | ActionFont PdfStandardFont
-  | ActionFontAddIfMissing
-  | ActionFontSetSize Double
   | ActionPage
   | ActionPageSetSize PdfPageSize
   | ActionPageSetLayout PdfPageLayout
@@ -928,10 +944,12 @@ data Action
                          Double
   | ActionPageSetSizeCustom Double
                             Double
-  | ActionTextAt Text
-                 Double
-                 Double
-  | ActionText Text
+  | ActionText
+  | ActionTextContent Text
+  | ActionTextFont PdfStandardFont
+  | ActionTextFontSize Double
+  | ActionTextPos Double
+                  Double
   | ActionMoveDown
   | ActionComposite [Action]
 
@@ -950,7 +968,7 @@ instance IsExecutableAction Action where
       , pdfDocumentStartXref = Just $ L.last positions
       , pdfDocumentTrailer =
           (pdfDocumentTrailer pdfDoc)
-            {pdfTrailerSize = Just $ pdfDocumentNextObjId pdfDoc - 1}
+            {pdfTrailerSize = Just $ pdfDocumentNextObjId pdfDoc}
       }
     where
       (headerLines, objectBlocks, _) = pdfDocumentByteStringLineBlocks pdfDoc
@@ -962,55 +980,13 @@ instance IsExecutableAction Action where
           (\(ls, accl) len -> (ls ++ [accl + len], accl + len))
           ([headerLength], headerLength)
           lengths
-  execute (ActionFont standardFont) pdfDoc =
-    pdfDoc
-      { pdfDocumentPages =
-          pdfPages
-            { pdfPagesKids =
-                initPages ++ [lastPage {pdfPageCurrentFont = standardFont}]
-            }
-      }
-    where
-      (pdfPages, initPages, lastPage) = pdfPagesTuple pdfDoc
-  execute (ActionFontSetSize fontSize) pdfDoc =
-    pdfDoc
-      { pdfDocumentPages =
-          pdfPages
-            { pdfPagesKids =
-                initPages ++ [lastPage {pdfPageCurrentFontSize = fontSize}]
-            }
-      }
-    where
-      (pdfPages, initPages, lastPage) = pdfPagesTuple pdfDoc
-  execute ActionFontAddIfMissing pdfDoc =
-    pdfDoc
-      { pdfDocumentNextObjId = nextObjId
-      , pdfDocumentFonts =
-          pdfDocumentFonts pdfDoc ++
-          if fontAlreadyAdded
-            then []
-            else [ PdfFont
-                     { pdfFontObjId = fontObjId
-                     , pdfFontName = T.concat ["F", intToText fontObjId]
-                     , pdfFontStandardFont = pdfPageCurrentFont lastPage
-                     }
-                 ]
-      }
-    where
-      (_, _, lastPage) = pdfPagesTuple pdfDoc
-      fontAlreadyAdded = M.isJust $ currentPdfFont pdfDoc
-      fontObjId = pdfDocumentNextObjId pdfDoc
-      nextObjId =
-        if fontAlreadyAdded
-          then pdfDocumentNextObjId pdfDoc
-          else pdfDocumentNextObjId pdfDoc + 1 + 1
   execute ActionPage pdfDoc =
     pdfDoc
       { pdfDocumentNextObjId = nextObjId
       , pdfDocumentPages =
           (pdfDocumentPages pdfDoc)
             { pdfPagesKids =
-                (pdfPagesKids $ pdfDocumentPages pdfDoc) ++
+                pdfPagesKids (pdfDocumentPages pdfDoc) ++
                 [ PdfPage
                     { pdfPageObjId = pageObjId
                     , pdfPageSize = defaultPageSize
@@ -1031,8 +1007,6 @@ instance IsExecutableAction Action where
                           { pdfPosX = pdfPageMarginLeft defaultPageMargins
                           , pdfPosY = pdfPageMarginTop defaultPageMargins
                           }
-                    , pdfPageCurrentFont = defaultFont
-                    , pdfPageCurrentFontSize = defaultFontSize
                     }
                 ]
             }
@@ -1101,34 +1075,23 @@ instance IsExecutableAction Action where
       }
     where
       (pdfPages, initPages, lastPage) = pdfPagesTuple pdfDoc
-  execute (ActionTextAt t x y) pdfDoc =
+  execute ActionText pdfDoc =
     pdfDoc
       { pdfDocumentPages =
           pdfPages
             { pdfPagesKids =
                 initPages ++
                 [ lastPage
-                    { pdfPageResources =
-                        (pdfPageResources lastPage)
-                          { pdfResourcesFonts =
-                              L.nub
-                                (pageFonts lastPage ++
-                                 case currentPdfFont pdfDoc of
-                                   Just pdfFont -> [pdfFont]
-                                   _ -> [])
-                          }
-                    , pdfPageContents =
+                    { pdfPageContents =
                         (pdfPageContents lastPage)
                           { pdfContentsTexts =
-                              (pdfContentsTexts $ pdfPageContents lastPage) ++
+                              pdfContentsTexts (pdfPageContents lastPage) ++
                               [ PdfText
-                                  { pdfTextText = t
+                                  { pdfTextText = Nothing
                                   , pdfTextX = x
                                   , pdfTextY = y
-                                  , pdfTextStandardFont =
-                                      pdfPageCurrentFont lastPage
-                                  , pdfTextFontSize =
-                                      pdfPageCurrentFontSize lastPage
+                                  , pdfTextStandardFont = Nothing
+                                  , pdfTextFontSize = Nothing
                                   }
                               ]
                           }
@@ -1139,11 +1102,111 @@ instance IsExecutableAction Action where
       }
     where
       (pdfPages, initPages, lastPage) = pdfPagesTuple pdfDoc
-      pageFonts = pdfResourcesFonts . pdfPageResources
-  execute (ActionText t) pdfDoc = execute (ActionTextAt t x y) pdfDoc
-    where
-      (_, _, lastPage) = pdfPagesTuple pdfDoc
       PdfPos x y = pdfPageCurrentPos lastPage
+  execute (ActionTextContent t) pdfDoc =
+    pdfDoc
+      { pdfDocumentPages =
+          pdfPages
+            { pdfPagesKids =
+                initPages ++
+                [ lastPage
+                    { pdfPageContents =
+                        (pdfPageContents lastPage)
+                          { pdfContentsTexts =
+                              initTexts ++ [lastText {pdfTextText = Just t}]
+                          }
+                    }
+                ]
+            }
+      }
+    where
+      (pdfPages, initPages, lastPage) = pdfPagesTuple pdfDoc
+      (initTexts, lastText) = pdfTextsTuple lastPage
+  execute (ActionTextFont stdFont) pdfDoc =
+    pdfDoc
+      { pdfDocumentNextObjId = nextObjId
+      , pdfDocumentFonts = L.nub $ pdfDocumentFonts pdfDoc ++ [pdfFont]
+      , pdfDocumentPages =
+          pdfPages
+            { pdfPagesKids =
+                initPages ++
+                [ lastPage
+                    { pdfPageResources =
+                        (pdfPageResources lastPage)
+                          { pdfResourcesFonts =
+                              L.nub $
+                              (pdfResourcesFonts . pdfPageResources $ lastPage) ++
+                              [pdfFont]
+                          }
+                    , pdfPageContents =
+                        (pdfPageContents lastPage)
+                          { pdfContentsTexts =
+                              initTexts ++
+                              [lastText {pdfTextStandardFont = Just stdFont}]
+                          }
+                    }
+                ]
+            }
+      }
+    where
+      fontObjId = pdfDocumentNextObjId pdfDoc
+      maybePdfFont = findPdfFont stdFont pdfDoc
+      fontAlreadyAdded = M.isJust maybePdfFont
+      pdfFont =
+        case maybePdfFont of
+          Just pdfFont' -> pdfFont'
+          _ ->
+            PdfFont
+              { pdfFontObjId = fontObjId
+              , pdfFontName = T.concat ["F", intToText fontObjId]
+              , pdfFontStandardFont = stdFont
+              }
+      nextObjId =
+        if fontAlreadyAdded
+          then pdfDocumentNextObjId pdfDoc
+          else pdfDocumentNextObjId pdfDoc + 1
+      (pdfPages, initPages, lastPage) = pdfPagesTuple pdfDoc
+      (initTexts, lastText) = pdfTextsTuple lastPage
+  execute (ActionTextFontSize fontSize) pdfDoc =
+    pdfDoc
+      { pdfDocumentPages =
+          pdfPages
+            { pdfPagesKids =
+                initPages ++
+                [ lastPage
+                    { pdfPageContents =
+                        (pdfPageContents lastPage)
+                          { pdfContentsTexts =
+                              initTexts ++
+                              [lastText {pdfTextFontSize = Just fontSize}]
+                          }
+                    }
+                ]
+            }
+      }
+    where
+      (pdfPages, initPages, lastPage) = pdfPagesTuple pdfDoc
+      (initTexts, lastText) = pdfTextsTuple lastPage
+  execute (ActionTextPos x y) pdfDoc =
+    pdfDoc
+      { pdfDocumentPages =
+          pdfPages
+            { pdfPagesKids =
+                initPages ++
+                [ lastPage
+                    { pdfPageContents =
+                        (pdfPageContents lastPage)
+                          { pdfContentsTexts =
+                              initTexts ++
+                              [lastText {pdfTextX = x, pdfTextY = y}]
+                          }
+                    }
+                ]
+            }
+      }
+    where
+      (pdfPages, initPages, lastPage) = pdfPagesTuple pdfDoc
+      (initTexts, lastText) = pdfTextsTuple lastPage
   execute ActionMoveDown pdfDoc =
     pdfDoc
       { pdfDocumentPages =
@@ -1152,11 +1215,17 @@ instance IsExecutableAction Action where
                 initPages ++
                 [ lastPage
                     { pdfPageCurrentPos =
-                        PdfPos x (y + currentLineHeight lastPage)
+                        PdfPos
+                          (pdfTextX lastText)
+                          (pdfTextY lastText + currentLineHeight)
                     }
                 ]
             }
       }
     where
       (pdfPages, initPages, lastPage) = pdfPagesTuple pdfDoc
-      PdfPos x y = pdfPageCurrentPos lastPage
+      (_, lastText) = pdfTextsTuple lastPage
+      currentLineHeight =
+        case (pdfTextStandardFont lastText, pdfTextFontSize lastText) of
+          (Just stdFont, Just fontSize) -> fontLineHeight stdFont fontSize
+          _ -> 0

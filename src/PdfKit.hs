@@ -1,12 +1,15 @@
 module PdfKit
   ( PdfKit.Builder.PdfDocument(..)
-  , PdfKit.Builder.DocumentBuilder
-  , PdfKit.Builder.PageBuilder
-  -- , PdfKit.Builder.PageBuilderM(..)
-  -- , PdfKit.Builder.DocumentBuilderM(..)
-  -- , PdfKit.Builder.Action(..)
+  , PdfKit.Builder.PdfDocumentBuilder
+  , PdfKit.Builder.PdfPageBuilder
+  , PdfKit.Builder.PdfTextBuilder
+  , PdfKit.Builder.PdfPageBuilderM(..)
+  , PdfKit.Builder.PdfDocumentBuilderM(..)
+  , PdfKit.Builder.PdfTextBuilderM(..)
+  , PdfKit.Builder.Action(..)
   , PdfKit.Builder.documentAction
   , PdfKit.Builder.pageAction
+  , PdfKit.Builder.textAction
   , PdfKit.Api.producer
   , PdfKit.Api.creator
   , PdfKit.Api.page
@@ -18,8 +21,10 @@ module PdfKit
   , PdfKit.Api.layout
   , PdfKit.Api.margin
   , PdfKit.Api.margins
-  , PdfKit.Api.textAt
   , PdfKit.Api.text
+  , PdfKit.Api.textPos
+  , PdfKit.Api.textTemplate
+  , PdfKit.Api.content
   , PdfKit.Api.moveDown
   , PdfKit.Api.buildPdfDoc
   , PdfKit.Api.encodePdf
@@ -76,6 +81,20 @@ module PdfKit
   , PdfKit.Builder.sLegal
   , PdfKit.Builder.sLetter
   , PdfKit.Builder.sTabloid
+  , PdfKit.Builder.courier
+  , PdfKit.Builder.courierBold
+  , PdfKit.Builder.courierBoldOblique
+  , PdfKit.Builder.courierOblique
+  , PdfKit.Builder.helvetica
+  , PdfKit.Builder.helveticaBold
+  , PdfKit.Builder.helveticaBoldOblique
+  , PdfKit.Builder.helveticaOblique
+  , PdfKit.Builder.symbol
+  , PdfKit.Builder.timesBold
+  , PdfKit.Builder.timesBoldItalic
+  , PdfKit.Builder.timesItalic
+  , PdfKit.Builder.timesRoman
+  , PdfKit.Builder.zapfDingbats
   ) where
 
 import qualified PdfKit.Api
