@@ -48,6 +48,12 @@ formatXrefPos :: Int -> Text
 formatXrefPos i = T.pack $ printf "%010d" i
 
 -----------------------------------------------
+data PdfPath = PdfPath
+  { pdfPathPoints :: [PdfPos]
+  , pdfPathDoStroke :: Maybe Bool
+  }
+
+-----------------------------------------------
 data PdfText = PdfText
   { pdfTextText :: Maybe Text
   , pdfTextX :: Double

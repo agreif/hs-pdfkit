@@ -19,6 +19,9 @@ module PdfKit.Api
   , PdfKit.Api.textTemplate
   , PdfKit.Api.content
   , PdfKit.Api.moveDown
+  , PdfKit.Api.path
+  , PdfKit.Api.pathPoint
+  , PdfKit.Api.pathStroke
   , PdfKit.Api.buildPdfDoc
   , PdfKit.Api.encodePdf
   , PdfKit.Api.encodePdf'
@@ -101,6 +104,16 @@ fontSize = textAction . ActionTextFontSize
 
 moveDown :: PdfPageBuilder
 moveDown = pageAction ActionMoveDown
+
+path :: PdfPathBuilderM a -> PdfPageBuilder
+path (PdfPathBuilderM actions _) =
+  pageAction $ ActionComposite $ ActionPath : actions ++ [ActionMoveDown]
+
+pathPoint :: Double -> Double -> PdfPathBuilder
+pathPoint x y = pathAction $ ActionPathPoint x y
+
+pathStroke :: PdfPathBuilder
+pathStroke = pathAction ActionPathStroke
 
 -----------------------------------------------
 buildPdfDoc :: PdfDocumentBuilderM a -> PdfDocument

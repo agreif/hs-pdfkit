@@ -88,6 +88,29 @@ textAction :: Action -> PdfTextBuilder
 textAction action = PdfTextBuilderM [action] ()
 
 -----------------------------------------------
+data PdfPathBuilderM a =
+  PdfPathBuilderM [Action]
+                  a
+
+type PdfPathBuilder = PdfPathBuilderM ()
+
+instance Functor PdfPathBuilderM where
+  fmap = liftM
+
+instance Applicative PdfPathBuilderM where
+  pure = return
+  (<*>) = ap
+
+instance Monad PdfPathBuilderM where
+  return = PdfPathBuilderM []
+  PdfPathBuilderM actions1 a >>= f =
+    let PdfPathBuilderM actions2 b = f a
+     in PdfPathBuilderM (actions1 ++ actions2) b
+
+pathAction :: Action -> PdfPathBuilder
+pathAction action = PdfPathBuilderM [action] ()
+
+-----------------------------------------------
 class ToByteStringLines a where
   toByteStringLines :: a -> [ByteString]
 
@@ -438,6 +461,7 @@ instance ToByteStringLines (PdfPage, PdfDocument) where
 data PdfContents = PdfContents
   { pdfContentsObjId :: Int
   , pdfContentsTexts :: [PdfText]
+  , pdfContentsPaths :: [PdfPath]
   }
 
 instance ToJSON PdfContents where
@@ -645,6 +669,13 @@ pdfTextsTuple pdfPage = (initTexts, lastText)
     initTexts = L.init pdfTexts
     lastText = L.last pdfTexts
 
+pdfPathsTuple :: PdfPage -> ([PdfPath], PdfPath)
+pdfPathsTuple pdfPage = (initPaths, lastPath)
+  where
+    pdfPaths = pdfContentsPaths $ pdfPageContents pdfPage
+    initPaths = L.init pdfPaths
+    lastPath = L.last pdfPaths
+
 applyLayout :: PdfPageSize -> PdfPageLayout -> PdfPageSize
 applyLayout size Portrait = size
 applyLayout (PdfPageSize w h) Landscape =
@@ -678,7 +709,8 @@ pdfDocumentByteStringLineBlocks pdfDoc =
 
 -----------------------------------------------
 data Action
-  = ActionInfoSetProducer Text
+  = ActionComposite [Action]
+  | ActionInfoSetProducer Text
   | ActionInfoSetCreator Text
   | ActionInfoSetCreationDate UTCTime
                               TimeZone
@@ -702,7 +734,10 @@ data Action
   | ActionTextColor PdfColor
   | ActionTextFillOpacity Double
   | ActionMoveDown
-  | ActionComposite [Action]
+  | ActionPath
+  | ActionPathPoint Double
+                    Double
+  | ActionPathStroke
 
 -----------------------------------------------
 instance IsExecutableAction Action where
@@ -760,6 +795,7 @@ instance IsExecutableAction Action where
                         PdfContents
                           { pdfContentsObjId = contentsObjId
                           , pdfContentsTexts = []
+                          , pdfContentsPaths = []
                           }
                     , pdfPageCurrentPos =
                         PdfPos
@@ -1057,3 +1093,70 @@ instance IsExecutableAction Action where
         case (pdfTextStandardFont lastText, pdfTextFontSize lastText) of
           (Just stdFont, Just fontSize) -> fontLineHeight stdFont fontSize
           _ -> 0
+  execute ActionPath pdfDoc =
+    pdfDoc
+      { pdfDocumentPages =
+          pdfPages
+            { pdfPagesKids =
+                initPages ++
+                [ lastPage
+                    { pdfPageContents =
+                        (pdfPageContents lastPage)
+                          { pdfContentsPaths =
+                              pdfContentsPaths (pdfPageContents lastPage) ++
+                              [ PdfPath
+                                  { pdfPathPoints = []
+                                  , pdfPathDoStroke = Nothing
+                                  }
+                              ]
+                          }
+                    }
+                ]
+            }
+      }
+    where
+      (pdfPages, initPages, lastPage) = pdfPagesTuple pdfDoc
+  execute (ActionPathPoint x y) pdfDoc =
+    pdfDoc
+      { pdfDocumentPages =
+          pdfPages
+            { pdfPagesKids =
+                initPages ++
+                [ lastPage
+                    { pdfPageContents =
+                        (pdfPageContents lastPage)
+                          { pdfContentsPaths =
+                              initPaths ++
+                              [ lastPath
+                                  { pdfPathPoints =
+                                      pdfPathPoints lastPath ++ [PdfPos x y]
+                                  }
+                              ]
+                          }
+                    }
+                ]
+            }
+      }
+    where
+      (pdfPages, initPages, lastPage) = pdfPagesTuple pdfDoc
+      (initPaths, lastPath) = pdfPathsTuple lastPage
+  execute ActionPathStroke pdfDoc =
+    pdfDoc
+      { pdfDocumentPages =
+          pdfPages
+            { pdfPagesKids =
+                initPages ++
+                [ lastPage
+                    { pdfPageContents =
+                        (pdfPageContents lastPage)
+                          { pdfContentsPaths =
+                              initPaths ++
+                              [lastPath {pdfPathDoStroke = Just True}]
+                          }
+                    }
+                ]
+            }
+      }
+    where
+      (pdfPages, initPages, lastPage) = pdfPagesTuple pdfDoc
+      (initPaths, lastPath) = pdfPathsTuple lastPage

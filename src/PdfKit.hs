@@ -30,6 +30,9 @@ module PdfKit
   , PdfKit.Api.textTemplate
   , PdfKit.Api.content
   , PdfKit.Api.moveDown
+  , PdfKit.Api.path
+  , PdfKit.Api.pathPoint
+  , PdfKit.Api.pathStroke
   , PdfKit.Api.buildPdfDoc
   , PdfKit.Api.encodePdf
   , PdfKit.Api.encodePdf'
