@@ -13,30 +13,33 @@ samplePdfDoc = do
       creator "sample creator"
       creationDate now timeZone
       pageA4Landscape $ do
+        line $ do
+          linePoint 100 100
+          linePoint 100 200
+          linePoint 200 200
+          lineStroke
         text $ do
+          textPos 180 190
+          textColorCmyk 10 60 60 80
+          textFillOpacity 1
+          font helvetica
+          fontSize 24
+          content "foo bar"
+        textHelvetica24BlueOpaque $ do
           content "ü ä=ã, ö=õ, ü=ũ"
-          font courier
-          fontSize 12
-        textHelvetica24 $ do
-          textPos 100 100
-          content "ü ä=ã, ö=õ, ü=ũ"
-        textHelvetica24 $ do
-          textColorRgb 0 255 0
-          textFillOpacity 0.25
-          content "foo"
-        textHelvetica24 $ do
-          textColorCmyk 0 100 0 90
-          textFillOpacity 0.5
-          content "bar"
   where
     pageA4Landscape :: PdfPageBuilder -> PdfDocumentBuilder
-    pageA4Landscape = pageTemplate $ do
-      pageSize sLetter
-      layout landscape
-    textHelvetica24 :: PdfTextBuilder -> PdfPageBuilder
-    textHelvetica24 = textTemplate $ do
-      font helvetica
-      fontSize 24
+    pageA4Landscape =
+      pageTemplate $ do
+        pageSize sLetter
+        layout landscape
+    textHelvetica24BlueOpaque :: PdfTextBuilder -> PdfPageBuilder
+    textHelvetica24BlueOpaque =
+      textTemplate $ do
+        font helvetica
+        fontSize 24
+        textColorRgb 0 0 255
+        textFillOpacity 0.5
 
 -- Yesod Handler
 getSamplePdfInlineR :: Handler TypedContent

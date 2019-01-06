@@ -668,21 +668,32 @@ pdfDocumentByteStringLineBlocks pdfDoc =
   where
     headerLines = pdfDocumentHeaderLines pdfDoc
     refLineBlocks =
-      [ toByteStringLines $ pdfDocumentInfo pdfDoc
-      , toByteStringLines (pdfDocumentRoot pdfDoc, pdfDoc)
-      , toByteStringLines $ pdfDocumentPages pdfDoc
+      L.map snd $
+      L.sort $
+      [ ( pdfInfoObjId $ pdfDocumentInfo pdfDoc
+        , toByteStringLines $ pdfDocumentInfo pdfDoc)
+      , ( pdfRootObjId $ pdfDocumentRoot pdfDoc
+        , toByteStringLines (pdfDocumentRoot pdfDoc, pdfDoc))
+      , ( pdfPagesObjId $ pdfDocumentPages pdfDoc
+        , toByteStringLines $ pdfDocumentPages pdfDoc)
       ] ++
       L.foldl
         (\acc pdfPage ->
-           [ toByteStringLines (pdfPage, pdfDoc)
-           , toByteStringLines $ pdfPageResources pdfPage
-           , toByteStringLines (pdfPageContents pdfPage, pdfPage, pdfDoc)
+           [ (pdfPageObjId pdfPage, toByteStringLines (pdfPage, pdfDoc))
+           , ( pdfResourcesObjId $ pdfPageResources pdfPage
+             , toByteStringLines $ pdfPageResources pdfPage)
+           , ( pdfContentsObjId $ pdfPageContents pdfPage
+             , toByteStringLines (pdfPageContents pdfPage, pdfPage, pdfDoc))
            ] ++
            acc)
         []
         (pdfPagesKids $ pdfDocumentPages pdfDoc) ++
-      L.map toByteStringLines (pdfDocumentFonts pdfDoc) ++
-      L.map toByteStringLines (pdfDocumentExtGStates pdfDoc)
+      L.map
+        (\f -> (pdfFontObjId f, toByteStringLines f))
+        (pdfDocumentFonts pdfDoc) ++
+      L.map
+        (\gs -> (pdfExtGStateObjId gs, toByteStringLines gs))
+        (pdfDocumentExtGStates pdfDoc)
     footerLines =
       toByteStringLines (pdfDocumentXref pdfDoc, pdfDoc) ++
       toByteStringLines (pdfDocumentTrailer pdfDoc, pdfDoc) ++
