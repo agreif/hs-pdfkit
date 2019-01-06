@@ -485,7 +485,8 @@ instance ToByteStringLines (PdfContents, PdfPage, PdfDocument) where
     , T.encodeUtf8 "stream"
     , T.encodeUtf8 $ translateOrigin pageHeight
     ] ++
-    map T.encodeUtf8 streamTextLines ++ [T.encodeUtf8 "endstream"]
+    map T.encodeUtf8 streamTextLines ++
+    [T.encodeUtf8 "endstream", T.encodeUtf8 "endobj"]
     where
       PdfPageSize {pdfPageSizeHeight = pageHeight} = pdfPageSize pdfPage
       streamTextLines =
@@ -501,7 +502,7 @@ instance IsStreamContent PdfStreamContent where
   toStreamTextLines pdfText@PdfText {} pdfPage pdfDoc =
     case pdfTextText pdfText of
       Just t ->
-        ["q", translateOrigin pageHeight, "BT"] ++
+        ["q", translateOrigin pageHeight] ++
         (case pdfTextColor pdfText of
            Just (PdfColorRgb r g b) ->
              [ "/DeviceRGB cs"
@@ -519,7 +520,8 @@ instance IsStreamContent PdfStreamContent where
                  [T.concat ["/", pdfExtGStateName pdfExtGState, " gs"]]
                _ -> []
            _ -> []) ++
-        [ translatePos
+        [ "BT"
+        , translatePos
         , T.concat
             [ "/"
             , case pdfTextStandardFont pdfText of
@@ -589,11 +591,9 @@ instance ToByteStringLines (PdfXref, PdfDocument) where
         ]
     , T.encodeUtf8 "0000000000 65535 f"
     ] ++
-    xrefLines
-    where
-      xrefLines =
-        L.map (\pos -> T.encodeUtf8 $ T.concat [formatXrefPos pos, " 00000 n"]) $
-        pdfXrefPositions pdfXref
+    L.map
+      (\pos -> T.encodeUtf8 $ T.concat [formatXrefPos pos, " 00000 n"])
+      (pdfXrefPositions pdfXref)
 
 -----------------------------------------------
 newtype PdfTrailer = PdfTrailer
