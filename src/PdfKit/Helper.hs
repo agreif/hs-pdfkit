@@ -48,33 +48,45 @@ formatXrefPos :: Int -> Text
 formatXrefPos i = T.pack $ printf "%010d" i
 
 -----------------------------------------------
-data PdfPath = PdfPath
-  { pdfPathPoints :: [PdfPos]
-  , pdfPathDoStroke :: Maybe Bool
-  }
+data PdfStreamContent
+  = PdfPath { pdfPathPoints :: [PdfPos]
+            , pdfPathDoStroke :: Maybe Bool }
+  | PdfText { pdfTextText :: Maybe Text
+            , pdfTextX :: Double
+            , pdfTextY :: Double
+            , pdfTextStandardFont :: Maybe PdfStandardFont
+            , pdfTextFontSize :: Maybe Double
+            , pdfTextColor :: Maybe PdfColor
+            , pdfTextFillOpacity :: Maybe Double }
+  deriving (Eq)
 
------------------------------------------------
-data PdfText = PdfText
-  { pdfTextText :: Maybe Text
-  , pdfTextX :: Double
-  , pdfTextY :: Double
-  , pdfTextStandardFont :: Maybe PdfStandardFont
-  , pdfTextFontSize :: Maybe Double
-  , pdfTextColor :: Maybe PdfColor
-  , pdfTextFillOpacity :: Maybe Double
-  }
-
-instance ToJSON PdfText where
+instance ToJSON PdfStreamContent where
   toJSON o =
-    object
-      [ "text" .= pdfTextText o
-      , "x" .= pdfTextX o
-      , "y" .= pdfTextY o
-      , "standardFont" .= pdfTextStandardFont o
-      , "fontSize" .= pdfTextFontSize o
-      , "color" .= pdfTextColor o
-      , "opacity" .= pdfTextFillOpacity o
-      ]
+    case o of
+      t@PdfText {} ->
+        object
+          [ "text" .= pdfTextText t
+          , "x" .= pdfTextX t
+          , "y" .= pdfTextY t
+          , "standardFont" .= pdfTextStandardFont t
+          , "fontSize" .= pdfTextFontSize t
+          , "color" .= pdfTextColor t
+          , "opacity" .= pdfTextFillOpacity t
+          ]
+      p@PdfPath {} ->
+        object ["points" .= pdfPathPoints p, "doStroke" .= pdfPathDoStroke p]
+
+isPdfText :: PdfStreamContent -> Bool
+isPdfText pdfStreamContent =
+  case pdfStreamContent of
+    PdfText {} -> True
+    _ -> False
+
+isPdfPath :: PdfStreamContent -> Bool
+isPdfPath pdfStreamContent =
+  case pdfStreamContent of
+    PdfPath {} -> True
+    _ -> False
 
 -----------------------------------------------
 data PdfPageMargins = PdfPageMargins
@@ -102,6 +114,7 @@ data PdfColor
                  , pdfColorCmykM :: Double
                  , pdfColorCmykY :: Double
                  , pdfColorCmykK :: Double }
+  deriving (Eq)
 
 instance ToJSON PdfColor where
   toJSON o =
@@ -125,7 +138,7 @@ landscape = Landscape
 data PdfPos = PdfPos
   { pdfPosX :: Double
   , pdfPosY :: Double
-  }
+  } deriving (Eq)
 
 instance ToJSON PdfPos where
   toJSON o = object ["x" .= pdfPosX o, "y" .= pdfPosY o]
@@ -386,3 +399,50 @@ symbol = PdfStandardFont "Symbol" "Type1" "WinAnsiEncoding" afmFontSymbol
 zapfDingbats :: PdfStandardFont
 zapfDingbats =
   PdfStandardFont "ZapfDingbats" "Type1" "WinAnsiEncoding" afmFontZapfDingbats
+
+-----------------------------------------------
+translateOrigin :: Double -> Text
+translateOrigin pageHeight =
+  T.concat ["1 0 0 -1 0 ", doubleToText pageHeight, " cm"]
+
+-----------------------------------------------
+dy :: PdfStandardFont -> Double -> Double
+dy stdFont size =
+  case maybeAscender of
+    Just ascender -> ascender / 1000 * size
+    _ -> 0
+  where
+    afmFont = pdfStandardFontAfmFont stdFont
+    maybeAscender = afmFontAscender afmFont
+
+fontLineHeight :: PdfStandardFont -> Double -> Double
+fontLineHeight stdFont size =
+  case (maybeAscender, maybeDescender) of
+    (Just ascender, Just descender) ->
+      (ascender + lineGap - descender) / 1000 * size
+    _ -> 0
+  where
+    afmFont = pdfStandardFontAfmFont stdFont
+    maybeAscender = afmFontAscender afmFont
+    maybeDescender = afmFontDescender afmFont
+    lineGap =
+      case (maybeAscender, maybeDescender) of
+        (Just ascender, Just descender) -> top - bottom - ascender + descender
+        _ -> 0
+    (top, bottom) =
+      let (_, b, _, t) = afmFontFontBBox afmFont
+       in (t, b)
+
+defaultPageMargins :: PdfPageMargins
+defaultPageMargins = PdfPageMargins 72 72 72 72
+
+defaultFont :: PdfStandardFont
+defaultFont = helvetica
+
+defaultFontSize :: Double
+defaultFontSize = 24
+
+applyLayout :: PdfPageSize -> PdfPageLayout -> PdfPageSize
+applyLayout size Portrait = size
+applyLayout (PdfPageSize w h) Landscape =
+  PdfPageSize {pdfPageSizeWidth = h, pdfPageSizeHeight = w}
