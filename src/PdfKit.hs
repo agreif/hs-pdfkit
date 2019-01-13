@@ -32,6 +32,7 @@ module PdfKit
   , PdfKit.Api.moveDown
   , PdfKit.Api.line
   , PdfKit.Api.linePoint
+  , PdfKit.Api.lineWidth
   , PdfKit.Api.lineStroke
   , PdfKit.Api.buildPdfDoc
   , PdfKit.Api.encodePdf

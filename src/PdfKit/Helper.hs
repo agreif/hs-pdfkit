@@ -50,6 +50,7 @@ formatXrefPos i = T.pack $ printf "%010d" i
 -----------------------------------------------
 data PdfStreamContent
   = PdfPath { pdfPathPoints :: [PdfPos]
+            , pdfPathWidth :: Maybe Double
             , pdfPathDoStroke :: Maybe Bool }
   | PdfText { pdfTextText :: Maybe Text
             , pdfTextX :: Double

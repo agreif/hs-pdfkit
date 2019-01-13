@@ -21,6 +21,7 @@ module PdfKit.Api
   , PdfKit.Api.moveDown
   , PdfKit.Api.line
   , PdfKit.Api.linePoint
+  , PdfKit.Api.lineWidth
   , PdfKit.Api.lineStroke
   , PdfKit.Api.buildPdfDoc
   , PdfKit.Api.encodePdf
@@ -111,6 +112,9 @@ line (PdfPathBuilderM actions _) =
 
 linePoint :: Double -> Double -> PdfPathBuilder
 linePoint x y = pathAction $ ActionPathPoint x y
+
+lineWidth :: Double -> PdfPathBuilder
+lineWidth w = pathAction $ ActionPathWidth w
 
 lineStroke :: PdfPathBuilder
 lineStroke = pathAction ActionPathStroke

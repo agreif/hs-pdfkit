@@ -565,6 +565,11 @@ instance IsStreamContent PdfStreamContent where
           (\(PdfPos x' y') ->
              T.concat [doubleToText x', " ", doubleToText y', " l"])
           followingPoints ++
+        (
+          case pdfPathWidth pdfPath of
+            Just w -> [T.concat [doubleToText w, " w"]]
+            _ -> []
+        ) ++
         case pdfPathDoStroke pdfPath of
           Just True -> ["S"]
           _ -> []
@@ -732,6 +737,7 @@ data Action
   | ActionPath
   | ActionPathPoint Double
                     Double
+  | ActionPathWidth Double
   | ActionPathStroke
 
 -----------------------------------------------
@@ -1109,6 +1115,7 @@ instance IsExecutableAction Action where
                                 (pdfPageContents lastPage) ++
                               [ PdfPath
                                   { pdfPathPoints = []
+                                  , pdfPathWidth = Nothing
                                   , pdfPathDoStroke = Nothing
                                   }
                               ]
@@ -1135,6 +1142,27 @@ instance IsExecutableAction Action where
                                       pdfPathPoints lastPath ++ [PdfPos x y]
                                   }
                               ] ++
+                              suffixContents
+                          }
+                    }
+                ]
+            }
+      }
+    where
+      (pdfPages, initPages, lastPage) = pdfPagesTuple pdfDoc
+      (prefixContents, lastPath, suffixContents) = pdfPathsTuple lastPage
+  execute (ActionPathWidth w) pdfDoc =
+    pdfDoc
+      { pdfDocumentPages =
+          pdfPages
+            { pdfPagesKids =
+                initPages ++
+                [ lastPage
+                    { pdfPageContents =
+                        (pdfPageContents lastPage)
+                          { pdfContentsStreamContents =
+                              prefixContents ++
+                              [lastPath {pdfPathWidth = Just w}] ++
                               suffixContents
                           }
                     }
