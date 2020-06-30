@@ -1,8 +1,10 @@
--- This file has been generated from package.yaml by hpack version 0.28.2.
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.32.0.
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 6088bcf6f057bd362c6090569ff73d5019b0615f98724789e6d7d6a46653a018
+-- hash: 607bd1792aea11a8a692b116976afaa27f79cb7187b889822fe519e08735c5aa
 
 name:           hs-pdfkit
 version:        0.0.1
@@ -15,7 +17,6 @@ maintainer:     Alex Greif
 license:        MIT
 license-file:   LICENSE.md
 build-type:     Simple
-cabal-version:  >= 1.10
 extra-source-files:
     CHANGELOG.md
     package.yaml
