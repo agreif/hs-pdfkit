@@ -2,7 +2,7 @@
 
 module PdfKit.Helper where
 
-import Data.Aeson (ToJSON, (.=), object, toJSON)
+import Data.Aeson ((.=), ToJSON, object, toJSON)
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Time
@@ -49,16 +49,20 @@ formatXrefPos i = T.pack $ printf "%010d" i
 
 -----------------------------------------------
 data PdfStreamContent
-  = PdfPath { pdfPathPoints :: [PdfPos]
-            , pdfPathWidth :: Maybe Double
-            , pdfPathDoStroke :: Maybe Bool }
-  | PdfText { pdfTextText :: Maybe Text
-            , pdfTextX :: Double
-            , pdfTextY :: Double
-            , pdfTextStandardFont :: Maybe PdfStandardFont
-            , pdfTextFontSize :: Maybe Double
-            , pdfTextColor :: Maybe PdfColor
-            , pdfTextFillOpacity :: Maybe Double }
+  = PdfPath
+      { pdfPathPoints :: [PdfPos],
+        pdfPathWidth :: Maybe Double,
+        pdfPathDoStroke :: Maybe Bool
+      }
+  | PdfText
+      { pdfTextText :: Maybe Text,
+        pdfTextX :: Double,
+        pdfTextY :: Double,
+        pdfTextStandardFont :: Maybe PdfStandardFont,
+        pdfTextFontSize :: Maybe Double,
+        pdfTextColor :: Maybe PdfColor,
+        pdfTextFillOpacity :: Maybe Double
+      }
   deriving (Eq)
 
 instance ToJSON PdfStreamContent where
@@ -66,13 +70,13 @@ instance ToJSON PdfStreamContent where
     case o of
       t@PdfText {} ->
         object
-          [ "text" .= pdfTextText t
-          , "x" .= pdfTextX t
-          , "y" .= pdfTextY t
-          , "standardFont" .= pdfTextStandardFont t
-          , "fontSize" .= pdfTextFontSize t
-          , "color" .= pdfTextColor t
-          , "opacity" .= pdfTextFillOpacity t
+          [ "text" .= pdfTextText t,
+            "x" .= pdfTextX t,
+            "y" .= pdfTextY t,
+            "standardFont" .= pdfTextStandardFont t,
+            "fontSize" .= pdfTextFontSize t,
+            "color" .= pdfTextColor t,
+            "opacity" .= pdfTextFillOpacity t
           ]
       p@PdfPath {} ->
         object ["points" .= pdfPathPoints p, "doStroke" .= pdfPathDoStroke p]
@@ -91,30 +95,34 @@ isPdfPath pdfStreamContent =
 
 -----------------------------------------------
 data PdfPageMargins = PdfPageMargins
-  { pdfPageMarginTop :: Double
-  , pdfPageMarginLeft :: Double
-  , pdfPageMarginBottom :: Double
-  , pdfPageMarginRight :: Double
+  { pdfPageMarginTop :: Double,
+    pdfPageMarginLeft :: Double,
+    pdfPageMarginBottom :: Double,
+    pdfPageMarginRight :: Double
   }
 
 instance ToJSON PdfPageMargins where
   toJSON o =
     object
-      [ "top" .= pdfPageMarginTop o
-      , "left" .= pdfPageMarginLeft o
-      , "bottom" .= pdfPageMarginBottom o
-      , "right" .= pdfPageMarginRight o
+      [ "top" .= pdfPageMarginTop o,
+        "left" .= pdfPageMarginLeft o,
+        "bottom" .= pdfPageMarginBottom o,
+        "right" .= pdfPageMarginRight o
       ]
 
 -----------------------------------------------
 data PdfColor
-  = PdfColorRgb { pdfColorRgbR :: Double
-                , pdfColorRgbG :: Double
-                , pdfColorRgbB :: Double }
-  | PdfColorCmyk { pdfColorCmykC :: Double
-                 , pdfColorCmykM :: Double
-                 , pdfColorCmykY :: Double
-                 , pdfColorCmykK :: Double }
+  = PdfColorRgb
+      { pdfColorRgbR :: Double,
+        pdfColorRgbG :: Double,
+        pdfColorRgbB :: Double
+      }
+  | PdfColorCmyk
+      { pdfColorCmykC :: Double,
+        pdfColorCmykM :: Double,
+        pdfColorCmykY :: Double,
+        pdfColorCmykK :: Double
+      }
   deriving (Eq)
 
 instance ToJSON PdfColor where
@@ -137,17 +145,18 @@ landscape = Landscape
 
 -----------------------------------------------
 data PdfPos = PdfPos
-  { pdfPosX :: Double
-  , pdfPosY :: Double
-  } deriving (Eq)
+  { pdfPosX :: Double,
+    pdfPosY :: Double
+  }
+  deriving (Eq)
 
 instance ToJSON PdfPos where
   toJSON o = object ["x" .= pdfPosX o, "y" .= pdfPosY o]
 
 -----------------------------------------------
 data PdfPageSize = PdfPageSize
-  { pdfPageSizeWidth :: Double
-  , pdfPageSizeHeight :: Double
+  { pdfPageSizeWidth :: Double,
+    pdfPageSizeHeight :: Double
   }
 
 instance ToJSON PdfPageSize where
@@ -309,18 +318,19 @@ sTabloid = PdfPageSize 792.00 1224.00
 
 -----------------------------------------------
 data PdfStandardFont = PdfStandardFont
-  { pdfStandardFontBaseFont :: Text
-  , pdfStandardFontSubtype :: Text
-  , pdfStandardFontEncoding :: Text
-  , pdfStandardFontAfmFont :: AfmFont
-  } deriving (Eq)
+  { pdfStandardFontBaseFont :: Text,
+    pdfStandardFontSubtype :: Text,
+    pdfStandardFontEncoding :: Text,
+    pdfStandardFontAfmFont :: AfmFont
+  }
+  deriving (Eq)
 
 instance ToJSON PdfStandardFont where
   toJSON o =
     object
-      [ "baseFont" .= pdfStandardFontBaseFont o
-      , "subtype" .= pdfStandardFontSubtype o
-      , "encoding" .= pdfStandardFontEncoding o
+      [ "baseFont" .= pdfStandardFontBaseFont o,
+        "subtype" .= pdfStandardFontSubtype o,
+        "encoding" .= pdfStandardFontEncoding o
       ]
 
 courier :: PdfStandardFont

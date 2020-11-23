@@ -1,32 +1,33 @@
 module PdfKit.Api
-  ( PdfKit.Api.producer
-  , PdfKit.Api.creator
-  , PdfKit.Api.creationDate
-  , PdfKit.Api.page
-  , PdfKit.Api.pageTemplate
-  , PdfKit.Api.font
-  , PdfKit.Api.fontSize
-  , PdfKit.Api.pageSize
-  , PdfKit.Api.pageSizeCustom
-  , PdfKit.Api.layout
-  , PdfKit.Api.margin
-  , PdfKit.Api.margins
-  , PdfKit.Api.textPos
-  , PdfKit.Api.textColorRgb
-  , PdfKit.Api.textColorCmyk
-  , PdfKit.Api.textFillOpacity
-  , PdfKit.Api.text
-  , PdfKit.Api.textTemplate
-  , PdfKit.Api.content
-  , PdfKit.Api.moveDown
-  , PdfKit.Api.line
-  , PdfKit.Api.linePoint
-  , PdfKit.Api.lineWidth
-  , PdfKit.Api.lineStroke
-  , PdfKit.Api.buildPdfDoc
-  , PdfKit.Api.encodePdf
-  , PdfKit.Api.encodePdf'
-  ) where
+  ( PdfKit.Api.producer,
+    PdfKit.Api.creator,
+    PdfKit.Api.creationDate,
+    PdfKit.Api.page,
+    PdfKit.Api.pageTemplate,
+    PdfKit.Api.font,
+    PdfKit.Api.fontSize,
+    PdfKit.Api.pageSize,
+    PdfKit.Api.pageSizeCustom,
+    PdfKit.Api.layout,
+    PdfKit.Api.margin,
+    PdfKit.Api.margins,
+    PdfKit.Api.textPos,
+    PdfKit.Api.textColorRgb,
+    PdfKit.Api.textColorCmyk,
+    PdfKit.Api.textFillOpacity,
+    PdfKit.Api.text,
+    PdfKit.Api.textTemplate,
+    PdfKit.Api.content,
+    PdfKit.Api.moveDown,
+    PdfKit.Api.line,
+    PdfKit.Api.linePoint,
+    PdfKit.Api.lineWidth,
+    PdfKit.Api.lineStroke,
+    PdfKit.Api.buildPdfDoc,
+    PdfKit.Api.encodePdf,
+    PdfKit.Api.encodePdf',
+  )
+where
 
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as B8

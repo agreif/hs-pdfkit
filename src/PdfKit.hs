@@ -1,109 +1,110 @@
 module PdfKit
-  ( PdfKit.Builder.PdfDocument(..)
-  , PdfKit.Builder.PdfDocumentBuilder
-  , PdfKit.Builder.PdfPageBuilder
-  , PdfKit.Builder.PdfTextBuilder
-  , PdfKit.Builder.PdfPageBuilderM(..)
-  , PdfKit.Builder.PdfDocumentBuilderM(..)
-  , PdfKit.Builder.PdfTextBuilderM(..)
-  , PdfKit.Builder.Action(..)
-  , PdfKit.Builder.documentAction
-  , PdfKit.Builder.pageAction
-  , PdfKit.Builder.textAction
-  , PdfKit.Api.producer
-  , PdfKit.Api.creator
-  , PdfKit.Api.creationDate
-  , PdfKit.Api.page
-  , PdfKit.Api.pageTemplate
-  , PdfKit.Api.font
-  , PdfKit.Api.fontSize
-  , PdfKit.Api.pageSize
-  , PdfKit.Api.pageSizeCustom
-  , PdfKit.Api.layout
-  , PdfKit.Api.margin
-  , PdfKit.Api.margins
-  , PdfKit.Api.text
-  , PdfKit.Api.textPos
-  , PdfKit.Api.textColorRgb
-  , PdfKit.Api.textColorCmyk
-  , PdfKit.Api.textFillOpacity
-  , PdfKit.Api.textTemplate
-  , PdfKit.Api.content
-  , PdfKit.Api.moveDown
-  , PdfKit.Api.line
-  , PdfKit.Api.linePoint
-  , PdfKit.Api.lineWidth
-  , PdfKit.Api.lineStroke
-  , PdfKit.Api.buildPdfDoc
-  , PdfKit.Api.encodePdf
-  , PdfKit.Api.encodePdf'
-  , PdfKit.Helper.portrait
-  , PdfKit.Helper.landscape
-  , PdfKit.Helper.s4A0
-  , PdfKit.Helper.s2A0
-  , PdfKit.Helper.sA0
-  , PdfKit.Helper.sA1
-  , PdfKit.Helper.sA2
-  , PdfKit.Helper.sA3
-  , PdfKit.Helper.sA4
-  , PdfKit.Helper.sA5
-  , PdfKit.Helper.sA6
-  , PdfKit.Helper.sA7
-  , PdfKit.Helper.sA8
-  , PdfKit.Helper.sA9
-  , PdfKit.Helper.sA10
-  , PdfKit.Helper.sB0
-  , PdfKit.Helper.sB1
-  , PdfKit.Helper.sB2
-  , PdfKit.Helper.sB3
-  , PdfKit.Helper.sB4
-  , PdfKit.Helper.sB5
-  , PdfKit.Helper.sB6
-  , PdfKit.Helper.sB7
-  , PdfKit.Helper.sB8
-  , PdfKit.Helper.sB9
-  , PdfKit.Helper.sB10
-  , PdfKit.Helper.sC0
-  , PdfKit.Helper.sC1
-  , PdfKit.Helper.sC2
-  , PdfKit.Helper.sC3
-  , PdfKit.Helper.sC4
-  , PdfKit.Helper.sC5
-  , PdfKit.Helper.sC6
-  , PdfKit.Helper.sC7
-  , PdfKit.Helper.sC8
-  , PdfKit.Helper.sC9
-  , PdfKit.Helper.sC10
-  , PdfKit.Helper.sRA0
-  , PdfKit.Helper.sRA1
-  , PdfKit.Helper.sRA2
-  , PdfKit.Helper.sRA3
-  , PdfKit.Helper.sRA4
-  , PdfKit.Helper.sSRA0
-  , PdfKit.Helper.sSRA1
-  , PdfKit.Helper.sSRA2
-  , PdfKit.Helper.sSRA3
-  , PdfKit.Helper.sSRA4
-  , PdfKit.Helper.sExecutive
-  , PdfKit.Helper.sFolio
-  , PdfKit.Helper.sLegal
-  , PdfKit.Helper.sLetter
-  , PdfKit.Helper.sTabloid
-  , PdfKit.Helper.courier
-  , PdfKit.Helper.courierBold
-  , PdfKit.Helper.courierBoldOblique
-  , PdfKit.Helper.courierOblique
-  , PdfKit.Helper.helvetica
-  , PdfKit.Helper.helveticaBold
-  , PdfKit.Helper.helveticaBoldOblique
-  , PdfKit.Helper.helveticaOblique
-  , PdfKit.Helper.symbol
-  , PdfKit.Helper.timesBold
-  , PdfKit.Helper.timesBoldItalic
-  , PdfKit.Helper.timesItalic
-  , PdfKit.Helper.timesRoman
-  , PdfKit.Helper.zapfDingbats
-  ) where
+  ( PdfKit.Builder.PdfDocument (..),
+    PdfKit.Builder.PdfDocumentBuilder,
+    PdfKit.Builder.PdfPageBuilder,
+    PdfKit.Builder.PdfTextBuilder,
+    PdfKit.Builder.PdfPageBuilderM (..),
+    PdfKit.Builder.PdfDocumentBuilderM (..),
+    PdfKit.Builder.PdfTextBuilderM (..),
+    PdfKit.Builder.Action (..),
+    PdfKit.Builder.documentAction,
+    PdfKit.Builder.pageAction,
+    PdfKit.Builder.textAction,
+    PdfKit.Api.producer,
+    PdfKit.Api.creator,
+    PdfKit.Api.creationDate,
+    PdfKit.Api.page,
+    PdfKit.Api.pageTemplate,
+    PdfKit.Api.font,
+    PdfKit.Api.fontSize,
+    PdfKit.Api.pageSize,
+    PdfKit.Api.pageSizeCustom,
+    PdfKit.Api.layout,
+    PdfKit.Api.margin,
+    PdfKit.Api.margins,
+    PdfKit.Api.text,
+    PdfKit.Api.textPos,
+    PdfKit.Api.textColorRgb,
+    PdfKit.Api.textColorCmyk,
+    PdfKit.Api.textFillOpacity,
+    PdfKit.Api.textTemplate,
+    PdfKit.Api.content,
+    PdfKit.Api.moveDown,
+    PdfKit.Api.line,
+    PdfKit.Api.linePoint,
+    PdfKit.Api.lineWidth,
+    PdfKit.Api.lineStroke,
+    PdfKit.Api.buildPdfDoc,
+    PdfKit.Api.encodePdf,
+    PdfKit.Api.encodePdf',
+    PdfKit.Helper.portrait,
+    PdfKit.Helper.landscape,
+    PdfKit.Helper.s4A0,
+    PdfKit.Helper.s2A0,
+    PdfKit.Helper.sA0,
+    PdfKit.Helper.sA1,
+    PdfKit.Helper.sA2,
+    PdfKit.Helper.sA3,
+    PdfKit.Helper.sA4,
+    PdfKit.Helper.sA5,
+    PdfKit.Helper.sA6,
+    PdfKit.Helper.sA7,
+    PdfKit.Helper.sA8,
+    PdfKit.Helper.sA9,
+    PdfKit.Helper.sA10,
+    PdfKit.Helper.sB0,
+    PdfKit.Helper.sB1,
+    PdfKit.Helper.sB2,
+    PdfKit.Helper.sB3,
+    PdfKit.Helper.sB4,
+    PdfKit.Helper.sB5,
+    PdfKit.Helper.sB6,
+    PdfKit.Helper.sB7,
+    PdfKit.Helper.sB8,
+    PdfKit.Helper.sB9,
+    PdfKit.Helper.sB10,
+    PdfKit.Helper.sC0,
+    PdfKit.Helper.sC1,
+    PdfKit.Helper.sC2,
+    PdfKit.Helper.sC3,
+    PdfKit.Helper.sC4,
+    PdfKit.Helper.sC5,
+    PdfKit.Helper.sC6,
+    PdfKit.Helper.sC7,
+    PdfKit.Helper.sC8,
+    PdfKit.Helper.sC9,
+    PdfKit.Helper.sC10,
+    PdfKit.Helper.sRA0,
+    PdfKit.Helper.sRA1,
+    PdfKit.Helper.sRA2,
+    PdfKit.Helper.sRA3,
+    PdfKit.Helper.sRA4,
+    PdfKit.Helper.sSRA0,
+    PdfKit.Helper.sSRA1,
+    PdfKit.Helper.sSRA2,
+    PdfKit.Helper.sSRA3,
+    PdfKit.Helper.sSRA4,
+    PdfKit.Helper.sExecutive,
+    PdfKit.Helper.sFolio,
+    PdfKit.Helper.sLegal,
+    PdfKit.Helper.sLetter,
+    PdfKit.Helper.sTabloid,
+    PdfKit.Helper.courier,
+    PdfKit.Helper.courierBold,
+    PdfKit.Helper.courierBoldOblique,
+    PdfKit.Helper.courierOblique,
+    PdfKit.Helper.helvetica,
+    PdfKit.Helper.helveticaBold,
+    PdfKit.Helper.helveticaBoldOblique,
+    PdfKit.Helper.helveticaOblique,
+    PdfKit.Helper.symbol,
+    PdfKit.Helper.timesBold,
+    PdfKit.Helper.timesBoldItalic,
+    PdfKit.Helper.timesItalic,
+    PdfKit.Helper.timesRoman,
+    PdfKit.Helper.zapfDingbats,
+  )
+where
 
 import qualified PdfKit.Api
 import qualified PdfKit.Builder
