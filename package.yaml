@@ -36,7 +36,7 @@ library:
       ghc-options:
       - -Wall
       - -fwarn-tabs
-      - -O2
+      - -O0
 
 flags:
   library-only:

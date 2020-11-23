@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 607bd1792aea11a8a692b116976afaa27f79cb7187b889822fe519e08735c5aa
+-- hash: 1fce0de0dbb38bca77d01b6834ff8d94735298e77ede96faa9d8dd4b7afabafe
 
 name:           hs-pdfkit
 version:        0.0.1
@@ -67,5 +67,5 @@ library
     ghc-options: -Wall -fwarn-tabs -O0
     cpp-options: -DDEVELOPMENT
   else
-    ghc-options: -Wall -fwarn-tabs -O2
+    ghc-options: -Wall -fwarn-tabs -O0
   default-language: Haskell2010
