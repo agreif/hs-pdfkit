@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 1fce0de0dbb38bca77d01b6834ff8d94735298e77ede96faa9d8dd4b7afabafe
+-- hash: 2c1f78acff84074ee82e83fe6c2a520cbc38fe059252b0ed2198c5f731213cc5
 
 name:           hs-pdfkit
 version:        0.0.1
@@ -61,6 +61,7 @@ library
     , base >=4.8.2.0 && <4.9 || >=4.9.1.0 && <5
     , bytestring
     , hex
+    , microlens-platform
     , text
     , time
   if (flag(dev)) || (flag(library-only))

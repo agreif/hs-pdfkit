@@ -23,9 +23,9 @@ module PdfKit.Api
     PdfKit.Api.linePoint,
     PdfKit.Api.lineWidth,
     PdfKit.Api.lineStroke,
-    PdfKit.Api.buildPdfDoc,
     PdfKit.Api.encodePdf,
     PdfKit.Api.encodePdf',
+    PdfKit.Api.buildPdfDoc,
   )
 where
 

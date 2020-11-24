@@ -21,6 +21,7 @@ dependencies:
 - bytestring
 - time
 - hex
+- microlens-platform
 
 library:
   source-dirs: src

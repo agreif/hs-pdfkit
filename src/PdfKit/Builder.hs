@@ -1,5 +1,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module PdfKit.Builder where
 
@@ -15,9 +16,96 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
 import Data.Time
+import Lens.Micro.Platform hiding ((.=))
 import PdfKit.Helper
 
 -----------------------------------------------
+data PdfDocument = PdfDocument
+  { _pdfDocumentVersion :: Text,
+    _pdfDocumentHeaderLines :: [ByteString],
+    _pdfDocumentNextObjId :: Int,
+    _pdfDocumentInfo :: PdfInfo,
+    _pdfDocumentRoot :: PdfRoot,
+    _pdfDocumentPages :: PdfPages,
+    _pdfDocumentFonts :: [PdfFont],
+    _pdfDocumentTrailer :: PdfTrailer,
+    _pdfDocumentXref :: PdfXref,
+    _pdfDocumentStartXref :: Maybe Int,
+    _pdfDocumentExtGStates :: [PdfExtGState]
+  }
+
+data PdfInfo = PdfInfo
+  { _pdfInfoObjId :: Int,
+    _pdfInfoProducer :: Text,
+    _pdfInfoCreator :: Text,
+    _pdfInfoCreationDate :: Maybe Text
+  }
+
+data PdfRoot = PdfRoot
+  { pdfRootObjId :: Int,
+    pdfRootPages :: Text
+  }
+
+data PdfPages = PdfPages
+  { _pdfPagesObjId :: Int,
+    _pdfPagesKids :: [PdfPage]
+  }
+
+data PdfExtGState = PdfExtGState
+  { pdfExtGStateObjId :: Int,
+    pdfExtGStateName :: Text,
+    pdfExtGStateFillOpacity :: Maybe Double
+  }
+  deriving (Eq)
+
+data PdfFont = PdfFont
+  { pdfFontObjId :: Int,
+    pdfFontName :: Text,
+    pdfFontStandardFont :: PdfStandardFont
+  }
+  deriving (Eq)
+
+data PdfResources = PdfResources
+  { pdfResourcesObjId :: Int,
+    pdfResourcesFonts :: [PdfFont],
+    pdfResourcesExtGStates :: [PdfExtGState]
+  }
+
+data PdfPage = PdfPage
+  { pdfPageObjId :: Int,
+    pdfPageSize :: PdfPageSize,
+    pdfPageMargins :: PdfPageMargins,
+    pdfPageLayout :: PdfPageLayout,
+    pdfPageResources :: PdfResources,
+    pdfPageContents :: PdfContents,
+    pdfPageCurrentPos :: PdfPos
+  }
+
+data PdfContents = PdfContents
+  { pdfContentsObjId :: Int,
+    pdfContentsStreamContents :: [PdfStreamContent]
+  }
+
+newtype PdfXref = PdfXref
+  { _pdfXrefPositions :: [Int]
+  }
+
+newtype PdfTrailer = PdfTrailer
+  { _pdfTrailerSize :: Maybe Int
+  }
+
+makeLenses ''PdfDocument
+
+makeLenses ''PdfPages
+
+makeLenses ''PdfInfo
+
+makeLenses ''PdfXref
+
+makeLenses ''PdfTrailer
+
+-----------------------------------------------
+
 data PdfDocumentBuilderM a
   = PdfDocumentBuilderM
       [Action]
@@ -123,34 +211,19 @@ class IsExecutableAction a where
 class IsStreamContent a where
   toStreamTextLines :: a -> PdfPage -> PdfDocument -> [Text]
 
------------------------------------------------
-data PdfDocument = PdfDocument
-  { pdfDocumentVersion :: Text,
-    pdfDocumentHeaderLines :: [ByteString],
-    pdfDocumentNextObjId :: Int,
-    pdfDocumentInfo :: PdfInfo,
-    pdfDocumentRoot :: PdfRoot,
-    pdfDocumentPages :: PdfPages,
-    pdfDocumentFonts :: [PdfFont],
-    pdfDocumentTrailer :: PdfTrailer,
-    pdfDocumentXref :: PdfXref,
-    pdfDocumentStartXref :: Maybe Int,
-    pdfDocumentExtGStates :: [PdfExtGState]
-  }
-
 instance ToJSON PdfDocument where
   toJSON o =
     object
-      [ "version" .= pdfDocumentVersion o,
-        "nextObjId" .= pdfDocumentNextObjId o,
-        "info" .= pdfDocumentInfo o,
-        "root" .= pdfDocumentRoot o,
-        "pages" .= pdfDocumentPages o,
-        "fonts" .= pdfDocumentFonts o,
-        "trailer" .= pdfDocumentTrailer o,
-        "xref" .= pdfDocumentXref o,
-        "startxref" .= pdfDocumentStartXref o,
-        "extGStates" .= pdfDocumentExtGStates o
+      [ "version" .= _pdfDocumentVersion o,
+        "nextObjId" .= _pdfDocumentNextObjId o,
+        "info" .= _pdfDocumentInfo o,
+        "root" .= _pdfDocumentRoot o,
+        "pages" .= _pdfDocumentPages o,
+        "fonts" .= _pdfDocumentFonts o,
+        "trailer" .= _pdfDocumentTrailer o,
+        "xref" .= _pdfDocumentXref o,
+        "startxref" .= _pdfDocumentStartXref o,
+        "extGStates" .= _pdfDocumentExtGStates o
       ]
 
 instance ToByteStringLines PdfDocument where
@@ -162,28 +235,28 @@ instance ToByteStringLines PdfDocument where
 initialPdfDocument :: PdfDocument
 initialPdfDocument =
   PdfDocument
-    { pdfDocumentVersion = version,
-      pdfDocumentHeaderLines =
+    { _pdfDocumentVersion = version,
+      _pdfDocumentHeaderLines =
         [ T.encodeUtf8 $ T.concat ["%PDF-", version],
           B8.pack ['%', '\xff', '\xff', '\xff', '\xff']
         ],
-      pdfDocumentNextObjId = nextObjId,
-      pdfDocumentInfo =
+      _pdfDocumentNextObjId = nextObjId,
+      _pdfDocumentInfo =
         PdfInfo
-          { pdfInfoObjId = infoObjId,
-            pdfInfoProducer = "hs-pdfkit",
-            pdfInfoCreator = "hs-pdfkit",
-            pdfInfoCreationDate = Nothing
+          { _pdfInfoObjId = infoObjId,
+            _pdfInfoProducer = "hs-pdfkit",
+            _pdfInfoCreator = "hs-pdfkit",
+            _pdfInfoCreationDate = Nothing
           },
-      pdfDocumentRoot =
+      _pdfDocumentRoot =
         PdfRoot {pdfRootObjId = rootObjId, pdfRootPages = ref pagesObjId},
-      pdfDocumentPages =
-        PdfPages {pdfPagesObjId = pagesObjId, pdfPagesKids = []},
-      pdfDocumentFonts = [],
-      pdfDocumentXref = PdfXref {pdfXrefPositions = []},
-      pdfDocumentTrailer = PdfTrailer {pdfTrailerSize = Nothing},
-      pdfDocumentStartXref = Nothing,
-      pdfDocumentExtGStates = []
+      _pdfDocumentPages =
+        PdfPages {_pdfPagesObjId = pagesObjId, _pdfPagesKids = []},
+      _pdfDocumentFonts = [],
+      _pdfDocumentXref = PdfXref {_pdfXrefPositions = []},
+      _pdfDocumentTrailer = PdfTrailer {_pdfTrailerSize = Nothing},
+      _pdfDocumentStartXref = Nothing,
+      _pdfDocumentExtGStates = []
     }
   where
     version = "1.4"
@@ -193,35 +266,29 @@ initialPdfDocument =
     nextObjId = 4
 
 -----------------------------------------------
-data PdfInfo = PdfInfo
-  { pdfInfoObjId :: Int,
-    pdfInfoProducer :: Text,
-    pdfInfoCreator :: Text,
-    pdfInfoCreationDate :: Maybe Text
-  }
 
 instance ToJSON PdfInfo where
   toJSON o =
     object
-      [ "objId" .= pdfInfoObjId o,
-        "producer" .= pdfInfoProducer o,
-        "creator" .= pdfInfoCreator o,
-        "creationDate" .= pdfInfoCreationDate o
+      [ "objId" .= _pdfInfoObjId o,
+        "producer" .= _pdfInfoProducer o,
+        "creator" .= _pdfInfoCreator o,
+        "creationDate" .= _pdfInfoCreationDate o
       ]
 
 instance ToByteStringLines PdfInfo where
   toByteStringLines pdfInfo =
-    [ T.encodeUtf8 $ T.concat [T.pack $ show $ pdfInfoObjId pdfInfo, " 0 obj"],
+    [ T.encodeUtf8 $ T.concat [T.pack $ show $ _pdfInfoObjId pdfInfo, " 0 obj"],
       T.encodeUtf8 $
         T.concat
           [ "% ------------------------------------------------------ info ",
-            intToText $ pdfInfoObjId pdfInfo
+            intToText $ _pdfInfoObjId pdfInfo
           ],
       T.encodeUtf8 "<<",
-      T.encodeUtf8 $ T.concat ["/Producer (", pdfInfoProducer pdfInfo, ")"],
-      T.encodeUtf8 $ T.concat ["/Creator (", pdfInfoCreator pdfInfo, ")"]
+      T.encodeUtf8 $ T.concat ["/Producer (", _pdfInfoProducer pdfInfo, ")"],
+      T.encodeUtf8 $ T.concat ["/Creator (", _pdfInfoCreator pdfInfo, ")"]
     ]
-      ++ ( case pdfInfoCreationDate pdfInfo of
+      ++ ( case _pdfInfoCreationDate pdfInfo of
              Just creationDate ->
                [T.encodeUtf8 $ T.concat ["/CreationDate (D:", creationDate, "Z)"]]
              _ -> []
@@ -229,10 +296,6 @@ instance ToByteStringLines PdfInfo where
       ++ [T.encodeUtf8 ">>", T.encodeUtf8 "endobj"]
 
 -----------------------------------------------
-data PdfRoot = PdfRoot
-  { pdfRootObjId :: Int,
-    pdfRootPages :: Text
-  }
 
 instance ToJSON PdfRoot where
   toJSON o = object ["objId" .= pdfRootObjId o, "pages" .= pdfRootPages o]
@@ -248,37 +311,32 @@ instance ToByteStringLines (PdfRoot, PdfDocument) where
       T.encodeUtf8 "<<",
       T.encodeUtf8 "/Type /Catalog",
       T.encodeUtf8 $
-        T.concat ["/Pages ", ref $ pdfPagesObjId $ pdfDocumentPages pdfDoc],
+        T.concat ["/Pages ", ref $ _pdfPagesObjId $ _pdfDocumentPages pdfDoc],
       T.encodeUtf8 ">>",
       T.encodeUtf8 "endobj"
     ]
 
 -----------------------------------------------
-data PdfPages = PdfPages
-  { pdfPagesObjId :: Int,
-    pdfPagesKids :: [PdfPage]
-  }
-
 instance ToJSON PdfPages where
-  toJSON o = object ["objId" .= pdfPagesObjId o, "kids" .= pdfPagesKids o]
+  toJSON o = object ["objId" .= _pdfPagesObjId o, "kids" .= _pdfPagesKids o]
 
 instance ToByteStringLines PdfPages where
   toByteStringLines pdfPages =
-    [ T.encodeUtf8 $ T.concat [T.pack $ show $ pdfPagesObjId pdfPages, " 0 obj"],
+    [ T.encodeUtf8 $ T.concat [T.pack $ show $ _pdfPagesObjId pdfPages, " 0 obj"],
       T.encodeUtf8 $
         T.concat
           [ "% ------------------------------------------------------ pages ",
-            intToText $ pdfPagesObjId pdfPages
+            intToText $ _pdfPagesObjId pdfPages
           ],
       T.encodeUtf8 "<<",
       T.encodeUtf8 "/Type /Pages",
       T.encodeUtf8 $
-        T.concat ["/Count ", intToText $ L.length $ pdfPagesKids pdfPages],
+        T.concat ["/Count ", intToText $ L.length $ _pdfPagesKids pdfPages],
       T.encodeUtf8 $
         T.concat
           [ "/Kids [",
             T.intercalate "  " $
-              L.map (ref . pdfPageObjId) (pdfPagesKids pdfPages),
+              L.map (ref . pdfPageObjId) (_pdfPagesKids pdfPages),
             "]"
           ],
       T.encodeUtf8 ">>",
@@ -286,13 +344,6 @@ instance ToByteStringLines PdfPages where
     ]
 
 -----------------------------------------------
-data PdfExtGState = PdfExtGState
-  { pdfExtGStateObjId :: Int,
-    pdfExtGStateName :: Text,
-    pdfExtGStateFillOpacity :: Maybe Double
-  }
-  deriving (Eq)
-
 instance ToJSON PdfExtGState where
   toJSON o =
     object
@@ -320,13 +371,6 @@ instance ToByteStringLines PdfExtGState where
       ++ [T.encodeUtf8 ">>", T.encodeUtf8 "endobj"]
 
 -----------------------------------------------
-data PdfFont = PdfFont
-  { pdfFontObjId :: Int,
-    pdfFontName :: Text,
-    pdfFontStandardFont :: PdfStandardFont
-  }
-  deriving (Eq)
-
 instance ToJSON PdfFont where
   toJSON o =
     object
@@ -356,12 +400,6 @@ instance ToByteStringLines PdfFont where
       stdFont = pdfFontStandardFont pdfFont
 
 -----------------------------------------------
-data PdfResources = PdfResources
-  { pdfResourcesObjId :: Int,
-    pdfResourcesFonts :: [PdfFont],
-    pdfResourcesExtGStates :: [PdfExtGState]
-  }
-
 instance ToJSON PdfResources where
   toJSON o =
     object
@@ -415,16 +453,6 @@ instance ToByteStringLines PdfResources where
       ++ [T.encodeUtf8 ">>", T.encodeUtf8 "endobj"]
 
 -----------------------------------------------
-data PdfPage = PdfPage
-  { pdfPageObjId :: Int,
-    pdfPageSize :: PdfPageSize,
-    pdfPageMargins :: PdfPageMargins,
-    pdfPageLayout :: PdfPageLayout,
-    pdfPageResources :: PdfResources,
-    pdfPageContents :: PdfContents,
-    pdfPageCurrentPos :: PdfPos
-  }
-
 instance ToJSON PdfPage where
   toJSON o =
     object
@@ -453,7 +481,7 @@ instance ToByteStringLines (PdfPage, PdfDocument) where
       T.encodeUtf8 "<<",
       T.encodeUtf8 "/Type /Page",
       T.encodeUtf8 $
-        T.concat ["/Parent ", ref $ pdfPagesObjId $ pdfDocumentPages pdfDoc],
+        T.concat ["/Parent ", ref $ _pdfPagesObjId $ _pdfDocumentPages pdfDoc],
       T.encodeUtf8 $ T.concat ["% ", T.pack $ show $ pdfPageLayout pdfPage],
       T.encodeUtf8 $
         T.concat
@@ -473,11 +501,6 @@ instance ToByteStringLines (PdfPage, PdfDocument) where
     ]
 
 -----------------------------------------------
-data PdfContents = PdfContents
-  { pdfContentsObjId :: Int,
-    pdfContentsStreamContents :: [PdfStreamContent]
-  }
-
 instance ToJSON PdfContents where
   toJSON o =
     object
@@ -592,12 +615,8 @@ instance IsStreamContent PdfStreamContent where
             _ -> []
 
 -----------------------------------------------
-newtype PdfXref = PdfXref
-  { pdfXrefPositions :: [Int]
-  }
-
 instance ToJSON PdfXref where
-  toJSON o = object ["positions" .= pdfXrefPositions o]
+  toJSON o = object ["positions" .= _pdfXrefPositions o]
 
 instance ToByteStringLines (PdfXref, PdfDocument) where
   toByteStringLines (pdfXref, pdfDoc) =
@@ -607,7 +626,7 @@ instance ToByteStringLines (PdfXref, PdfDocument) where
       T.encodeUtf8 $
         T.concat
           [ "0 ",
-            case pdfTrailerSize $ pdfDocumentTrailer pdfDoc of
+            case _pdfTrailerSize $ _pdfDocumentTrailer pdfDoc of
               Just size -> intToText size
               _ -> ""
           ],
@@ -615,15 +634,11 @@ instance ToByteStringLines (PdfXref, PdfDocument) where
     ]
       ++ L.map
         (\pos -> T.encodeUtf8 $ T.concat [formatXrefPos pos, " 00000 n"])
-        (pdfXrefPositions pdfXref)
+        (_pdfXrefPositions pdfXref)
 
------------------------------------------------
-newtype PdfTrailer = PdfTrailer
-  { pdfTrailerSize :: Maybe Int
-  }
-
+-- -----------------------------------------------
 instance ToJSON PdfTrailer where
-  toJSON o = object ["size" .= pdfTrailerSize o]
+  toJSON o = object ["size" .= _pdfTrailerSize o]
 
 instance ToByteStringLines (PdfTrailer, PdfDocument) where
   toByteStringLines (pdfTrailer, pdfDoc) =
@@ -632,11 +647,11 @@ instance ToByteStringLines (PdfTrailer, PdfDocument) where
         "% ------------------------------------------------------ trailer",
       T.encodeUtf8 "<<",
       T.encodeUtf8 $
-        T.concat ["/Size ", maybeIntToText $ pdfTrailerSize pdfTrailer],
+        T.concat ["/Size ", maybeIntToText $ _pdfTrailerSize pdfTrailer],
       T.encodeUtf8 $
-        T.concat ["/Root ", ref $ pdfRootObjId $ pdfDocumentRoot pdfDoc],
+        T.concat ["/Root ", ref $ pdfRootObjId $ _pdfDocumentRoot pdfDoc],
       T.encodeUtf8 $
-        T.concat ["/Info ", ref $ pdfInfoObjId $ pdfDocumentInfo pdfDoc],
+        T.concat ["/Info ", ref $ _pdfInfoObjId $ _pdfDocumentInfo pdfDoc],
       T.encodeUtf8 ">>"
     ]
 
@@ -645,21 +660,21 @@ findPdfFont :: PdfStandardFont -> PdfDocument -> Maybe PdfFont
 findPdfFont stdFont pdfDoc =
   L.find
     (\pdfFont -> pdfFontStandardFont pdfFont == stdFont)
-    (pdfDocumentFonts pdfDoc)
+    (_pdfDocumentFonts pdfDoc)
 
 findPdfExtGState :: Double -> PdfDocument -> Maybe PdfExtGState
 findPdfExtGState fillOpacity pdfDoc =
   L.find
     (\pdfExtGState -> pdfExtGStateFillOpacity pdfExtGState == Just fillOpacity)
-    (pdfDocumentExtGStates pdfDoc)
+    (_pdfDocumentExtGStates pdfDoc)
 
 -----------------------------------------------
-pdfPagesTuple :: PdfDocument -> (PdfPages, [PdfPage], PdfPage)
-pdfPagesTuple pdfDoc = (pdfPages, initPages, lastPage)
+pdfPagesTuple :: PdfDocument -> ([PdfPage], PdfPage)
+pdfPagesTuple pdfDoc = (initPages, lastPage)
   where
-    pdfPages = pdfDocumentPages pdfDoc
-    initPages = L.init $ pdfPagesKids pdfPages
-    lastPage = L.last $ pdfPagesKids pdfPages
+    pdfPages = _pdfDocumentPages pdfDoc
+    initPages = L.init $ _pdfPagesKids pdfPages
+    lastPage = L.last $ _pdfPagesKids pdfPages
 
 pdfTextsTuple ::
   PdfPage -> ([PdfStreamContent], PdfStreamContent, [PdfStreamContent])
@@ -688,18 +703,18 @@ pdfDocumentByteStringLineBlocks ::
 pdfDocumentByteStringLineBlocks pdfDoc =
   (headerLines, refLineBlocks, footerLines)
   where
-    headerLines = pdfDocumentHeaderLines pdfDoc
+    headerLines = _pdfDocumentHeaderLines pdfDoc
     refLineBlocks =
       L.map snd
         $ L.sort
-        $ [ ( pdfInfoObjId $ pdfDocumentInfo pdfDoc,
-              toByteStringLines $ pdfDocumentInfo pdfDoc
+        $ [ ( _pdfInfoObjId $ _pdfDocumentInfo pdfDoc,
+              toByteStringLines $ _pdfDocumentInfo pdfDoc
             ),
-            ( pdfRootObjId $ pdfDocumentRoot pdfDoc,
-              toByteStringLines (pdfDocumentRoot pdfDoc, pdfDoc)
+            ( pdfRootObjId $ _pdfDocumentRoot pdfDoc,
+              toByteStringLines (_pdfDocumentRoot pdfDoc, pdfDoc)
             ),
-            ( pdfPagesObjId $ pdfDocumentPages pdfDoc,
-              toByteStringLines $ pdfDocumentPages pdfDoc
+            ( _pdfPagesObjId $ _pdfDocumentPages pdfDoc,
+              toByteStringLines $ _pdfDocumentPages pdfDoc
             )
           ]
           ++ L.foldl
@@ -715,18 +730,18 @@ pdfDocumentByteStringLineBlocks pdfDoc =
                   ++ acc
             )
             []
-            (pdfPagesKids $ pdfDocumentPages pdfDoc)
+            (_pdfPagesKids $ _pdfDocumentPages pdfDoc)
           ++ L.map
             (\f -> (pdfFontObjId f, toByteStringLines f))
-            (pdfDocumentFonts pdfDoc)
+            (_pdfDocumentFonts pdfDoc)
           ++ L.map
             (\gs -> (pdfExtGStateObjId gs, toByteStringLines gs))
-            (pdfDocumentExtGStates pdfDoc)
+            (_pdfDocumentExtGStates pdfDoc)
     footerLines =
-      toByteStringLines (pdfDocumentXref pdfDoc, pdfDoc)
-        ++ toByteStringLines (pdfDocumentTrailer pdfDoc, pdfDoc)
+      toByteStringLines (_pdfDocumentXref pdfDoc, pdfDoc)
+        ++ toByteStringLines (_pdfDocumentTrailer pdfDoc, pdfDoc)
         ++ [ T.encodeUtf8 "startxref",
-             T.encodeUtf8 $ maybeIntToText $ pdfDocumentStartXref pdfDoc,
+             T.encodeUtf8 $ maybeIntToText $ _pdfDocumentStartXref pdfDoc,
              T.encodeUtf8 "%%EOF"
            ]
 
@@ -774,25 +789,18 @@ instance IsExecutableAction Action where
     where
       pdfDoc' = L.foldl (flip execute) pdfDoc actions
   execute (ActionInfoSetProducer text) pdfDoc =
-    pdfDoc {pdfDocumentInfo = (pdfDocumentInfo pdfDoc) {pdfInfoProducer = text}}
+    pdfDoc & (pdfDocumentInfo . pdfInfoProducer) .~ text
   execute (ActionInfoSetCreator text) pdfDoc =
-    pdfDoc {pdfDocumentInfo = (pdfDocumentInfo pdfDoc) {pdfInfoCreator = text}}
+    pdfDoc & (pdfDocumentInfo . pdfInfoCreator) .~ text
   execute (ActionInfoSetCreationDate now timeZone) pdfDoc =
-    pdfDoc
-      { pdfDocumentInfo =
-          (pdfDocumentInfo pdfDoc) {pdfInfoCreationDate = Just creationDate}
-      }
+    pdfDoc & ((pdfDocumentInfo . pdfInfoCreationDate) ?~ creationDate)
     where
       creationDate = T.pack $ formatLocalTime timeZone now
   execute ActionFinalize pdfDoc =
     pdfDoc
-      { pdfDocumentXref = PdfXref {pdfXrefPositions = L.init positions},
-        pdfDocumentStartXref = Just $ L.last positions,
-        pdfDocumentTrailer =
-          (pdfDocumentTrailer pdfDoc)
-            { pdfTrailerSize = Just $ pdfDocumentNextObjId pdfDoc
-            }
-      }
+      & pdfDocumentXref .~ PdfXref {_pdfXrefPositions = L.init positions}
+      & pdfDocumentStartXref ?~ L.last positions
+      & pdfDocumentTrailer . pdfTrailerSize ?~ _pdfDocumentNextObjId pdfDoc
     where
       (headerLines, objectBlocks, _) = pdfDocumentByteStringLineBlocks pdfDoc
       headerLength = BS.length $ B8.unlines headerLines
@@ -805,184 +813,136 @@ instance IsExecutableAction Action where
           lengths
   execute ActionPage pdfDoc =
     pdfDoc
-      { pdfDocumentNextObjId = nextObjId,
-        pdfDocumentPages =
-          (pdfDocumentPages pdfDoc)
-            { pdfPagesKids =
-                pdfPagesKids (pdfDocumentPages pdfDoc)
-                  ++ [ PdfPage
-                         { pdfPageObjId = pageObjId,
-                           pdfPageSize = defaultPageSize,
-                           pdfPageMargins = defaultPageMargins,
-                           pdfPageLayout = Portrait,
-                           pdfPageResources =
-                             PdfResources
-                               { pdfResourcesObjId = resourcesObjId,
-                                 pdfResourcesFonts = [],
-                                 pdfResourcesExtGStates = []
-                               },
-                           pdfPageContents =
-                             PdfContents
-                               { pdfContentsObjId = contentsObjId,
-                                 pdfContentsStreamContents = []
-                               },
-                           pdfPageCurrentPos =
-                             PdfPos
-                               { pdfPosX = pdfPageMarginLeft defaultPageMargins,
-                                 pdfPosY = pdfPageMarginTop defaultPageMargins
-                               }
-                         }
-                     ]
-            }
-      }
+      & pdfDocumentNextObjId .~ nextObjId
+      & (pdfDocumentPages . pdfPagesKids)
+        <>~ [ PdfPage
+                { pdfPageObjId = pageObjId,
+                  pdfPageSize = defaultPageSize,
+                  pdfPageMargins = defaultPageMargins,
+                  pdfPageLayout = Portrait,
+                  pdfPageResources =
+                    PdfResources
+                      { pdfResourcesObjId = resourcesObjId,
+                        pdfResourcesFonts = [],
+                        pdfResourcesExtGStates = []
+                      },
+                  pdfPageContents =
+                    PdfContents
+                      { pdfContentsObjId = contentsObjId,
+                        pdfContentsStreamContents = []
+                      },
+                  pdfPageCurrentPos =
+                    PdfPos
+                      { pdfPosX = pdfPageMarginLeft defaultPageMargins,
+                        pdfPosY = pdfPageMarginTop defaultPageMargins
+                      }
+                }
+            ]
     where
-      pageObjId = pdfDocumentNextObjId pdfDoc
-      resourcesObjId = pdfDocumentNextObjId pdfDoc + 1
-      contentsObjId = pdfDocumentNextObjId pdfDoc + 2
-      nextObjId = pdfDocumentNextObjId pdfDoc + 3
+      pageObjId = _pdfDocumentNextObjId pdfDoc
+      resourcesObjId = _pdfDocumentNextObjId pdfDoc + 1
+      contentsObjId = _pdfDocumentNextObjId pdfDoc + 2
+      nextObjId = _pdfDocumentNextObjId pdfDoc + 3
   execute (ActionPageSetSize size) pdfDoc =
     pdfDoc
-      { pdfDocumentPages =
-          pdfPages {pdfPagesKids = initPages ++ [lastPage {pdfPageSize = size}]}
-      }
+      & (pdfDocumentPages . pdfPagesKids) .~ initPages ++ [lastPage {pdfPageSize = size}]
     where
-      (pdfPages, initPages, lastPage) = pdfPagesTuple pdfDoc
+      (initPages, lastPage) = pdfPagesTuple pdfDoc
   execute (ActionPageSetSizeCustom width height) pdfDoc =
     pdfDoc
-      { pdfDocumentPages =
-          pdfPages
-            { pdfPagesKids =
-                initPages
-                  ++ [ lastPage
-                         { pdfPageSize =
-                             PdfPageSize
-                               { pdfPageSizeWidth = width,
-                                 pdfPageSizeHeight = height
-                               }
-                         }
-                     ]
-            }
-      }
+      & (pdfDocumentPages . pdfPagesKids) .~ initPages
+        ++ [ lastPage
+               { pdfPageSize =
+                   PdfPageSize
+                     { pdfPageSizeWidth = width,
+                       pdfPageSizeHeight = height
+                     }
+               }
+           ]
     where
-      (pdfPages, initPages, lastPage) = pdfPagesTuple pdfDoc
+      (initPages, lastPage) = pdfPagesTuple pdfDoc
   execute (ActionPageSetLayout lay) pdfDoc =
     pdfDoc
-      { pdfDocumentPages =
-          pdfPages
-            { pdfPagesKids =
-                initPages
-                  ++ [lastPage {pdfPageLayout = lay, pdfPageSize = pageSize}]
-            }
-      }
+      & (pdfDocumentPages . pdfPagesKids) .~ initPages ++ [lastPage {pdfPageLayout = lay, pdfPageSize = pageSize}]
     where
-      (pdfPages, initPages, lastPage) = pdfPagesTuple pdfDoc
+      (initPages, lastPage) = pdfPagesTuple pdfDoc
       pageSize = applyLayout (pdfPageSize lastPage) lay
   execute (ActionPageSetMargin x) pdfDoc =
     pdfDoc
-      { pdfDocumentPages =
-          pdfPages
-            { pdfPagesKids =
-                initPages
-                  ++ [lastPage {pdfPageMargins = PdfPageMargins x x x x}]
-            }
-      }
+      & (pdfDocumentPages . pdfPagesKids) .~ initPages ++ [lastPage {pdfPageMargins = PdfPageMargins x x x x}]
     where
-      (pdfPages, initPages, lastPage) = pdfPagesTuple pdfDoc
+      (initPages, lastPage) = pdfPagesTuple pdfDoc
   execute (ActionPageSetMargins top left bottom right) pdfDoc =
     pdfDoc
-      { pdfDocumentPages =
-          pdfPages
-            { pdfPagesKids =
-                initPages
-                  ++ [ lastPage
-                         { pdfPageMargins = PdfPageMargins top left bottom right
-                         }
-                     ]
-            }
-      }
+      & (pdfDocumentPages . pdfPagesKids) .~ initPages ++ [lastPage {pdfPageMargins = PdfPageMargins top left bottom right}]
     where
-      (pdfPages, initPages, lastPage) = pdfPagesTuple pdfDoc
+      (initPages, lastPage) = pdfPagesTuple pdfDoc
   execute ActionText pdfDoc =
     pdfDoc
-      { pdfDocumentPages =
-          pdfPages
-            { pdfPagesKids =
-                initPages
-                  ++ [ lastPage
-                         { pdfPageContents =
-                             (pdfPageContents lastPage)
-                               { pdfContentsStreamContents =
-                                   pdfContentsStreamContents
-                                     (pdfPageContents lastPage)
-                                     ++ [ PdfText
-                                            { pdfTextText = Nothing,
-                                              pdfTextX = x,
-                                              pdfTextY = y,
-                                              pdfTextStandardFont = Nothing,
-                                              pdfTextFontSize = Nothing,
-                                              pdfTextColor = Nothing,
-                                              pdfTextFillOpacity = Nothing
-                                            }
-                                        ]
-                               },
-                           pdfPageCurrentPos = PdfPos x y
-                         }
-                     ]
-            }
-      }
+      & (pdfDocumentPages . pdfPagesKids) .~ initPages
+      ++ [ lastPage
+             { pdfPageContents =
+                 (pdfPageContents lastPage)
+                   { pdfContentsStreamContents =
+                       pdfContentsStreamContents
+                         (pdfPageContents lastPage)
+                         ++ [ PdfText
+                                { pdfTextText = Nothing,
+                                  pdfTextX = x,
+                                  pdfTextY = y,
+                                  pdfTextStandardFont = Nothing,
+                                  pdfTextFontSize = Nothing,
+                                  pdfTextColor = Nothing,
+                                  pdfTextFillOpacity = Nothing
+                                }
+                            ]
+                   },
+               pdfPageCurrentPos = PdfPos x y
+             }
+         ]
     where
-      (pdfPages, initPages, lastPage) = pdfPagesTuple pdfDoc
+      (initPages, lastPage) = pdfPagesTuple pdfDoc
       PdfPos x y = pdfPageCurrentPos lastPage
   execute (ActionTextContent t) pdfDoc =
     pdfDoc
-      { pdfDocumentPages =
-          pdfPages
-            { pdfPagesKids =
-                initPages
-                  ++ [ lastPage
-                         { pdfPageContents =
-                             (pdfPageContents lastPage)
-                               { pdfContentsStreamContents =
-                                   prefixContents
-                                     ++ [lastText {pdfTextText = Just t}]
-                                     ++ suffixContents
-                               }
-                         }
-                     ]
-            }
-      }
+      & (pdfDocumentPages . pdfPagesKids) .~ initPages
+        ++ [ lastPage
+               { pdfPageContents =
+                   (pdfPageContents lastPage)
+                     { pdfContentsStreamContents =
+                         prefixContents
+                           ++ [lastText {pdfTextText = Just t}]
+                           ++ suffixContents
+                     }
+               }
+           ]
     where
-      (pdfPages, initPages, lastPage) = pdfPagesTuple pdfDoc
+      (initPages, lastPage) = pdfPagesTuple pdfDoc
       (prefixContents, lastText, suffixContents) = pdfTextsTuple lastPage
   execute (ActionTextFont stdFont) pdfDoc =
     pdfDoc
-      { pdfDocumentNextObjId = nextObjId,
-        pdfDocumentFonts = L.nub $ pdfDocumentFonts pdfDoc ++ [pdfFont],
-        pdfDocumentPages =
-          pdfPages
-            { pdfPagesKids =
-                initPages
-                  ++ [ lastPage
-                         { pdfPageResources =
-                             (pdfPageResources lastPage)
-                               { pdfResourcesFonts =
-                                   L.nub $
-                                     (pdfResourcesFonts . pdfPageResources $ lastPage)
-                                       ++ [pdfFont]
-                               },
-                           pdfPageContents =
-                             (pdfPageContents lastPage)
-                               { pdfContentsStreamContents =
-                                   prefixContents
-                                     ++ [lastText {pdfTextStandardFont = Just stdFont}]
-                                     ++ suffixContents
-                               }
-                         }
-                     ]
-            }
-      }
+      & pdfDocumentNextObjId .~ nextObjId
+      & pdfDocumentFonts .~ L.nub (_pdfDocumentFonts pdfDoc ++ [pdfFont])
+      & (pdfDocumentPages . pdfPagesKids) .~ initPages
+        ++ [ lastPage
+               { pdfPageResources =
+                   (pdfPageResources lastPage)
+                     { pdfResourcesFonts =
+                         L.nub $
+                           (pdfResourcesFonts . pdfPageResources $ lastPage)
+                             ++ [pdfFont]
+                     },
+                 pdfPageContents =
+                   (pdfPageContents lastPage)
+                     { pdfContentsStreamContents =
+                         prefixContents
+                           ++ [lastText {pdfTextStandardFont = Just stdFont}]
+                           ++ suffixContents
+                     }
+               }
+           ]
     where
-      fontObjId = pdfDocumentNextObjId pdfDoc
+      fontObjId = _pdfDocumentNextObjId pdfDoc
       maybePdfFont = findPdfFont stdFont pdfDoc
       fontAlreadyAdded = M.isJust maybePdfFont
       pdfFont =
@@ -996,105 +956,84 @@ instance IsExecutableAction Action where
               }
       nextObjId =
         if fontAlreadyAdded
-          then pdfDocumentNextObjId pdfDoc
-          else pdfDocumentNextObjId pdfDoc + 1
-      (pdfPages, initPages, lastPage) = pdfPagesTuple pdfDoc
+          then _pdfDocumentNextObjId pdfDoc
+          else _pdfDocumentNextObjId pdfDoc + 1
+      (initPages, lastPage) = pdfPagesTuple pdfDoc
       (prefixContents, lastText, suffixContents) = pdfTextsTuple lastPage
   execute (ActionTextFontSize fontSize) pdfDoc =
     pdfDoc
-      { pdfDocumentPages =
-          pdfPages
-            { pdfPagesKids =
-                initPages
-                  ++ [ lastPage
-                         { pdfPageContents =
-                             (pdfPageContents lastPage)
-                               { pdfContentsStreamContents =
-                                   prefixContents
-                                     ++ [lastText {pdfTextFontSize = Just fontSize}]
-                                     ++ suffixContents
-                               }
-                         }
-                     ]
-            }
-      }
+      & (pdfDocumentPages . pdfPagesKids) .~ initPages
+        ++ [ lastPage
+               { pdfPageContents =
+                   (pdfPageContents lastPage)
+                     { pdfContentsStreamContents =
+                         prefixContents
+                           ++ [lastText {pdfTextFontSize = Just fontSize}]
+                           ++ suffixContents
+                     }
+               }
+           ]
     where
-      (pdfPages, initPages, lastPage) = pdfPagesTuple pdfDoc
+      (initPages, lastPage) = pdfPagesTuple pdfDoc
       (prefixContents, lastText, suffixContents) = pdfTextsTuple lastPage
   execute (ActionTextPos x y) pdfDoc =
     pdfDoc
-      { pdfDocumentPages =
-          pdfPages
-            { pdfPagesKids =
-                initPages
-                  ++ [ lastPage
-                         { pdfPageContents =
-                             (pdfPageContents lastPage)
-                               { pdfContentsStreamContents =
-                                   prefixContents
-                                     ++ [lastText {pdfTextX = x, pdfTextY = y}]
-                                     ++ suffixContents
-                               }
-                         }
-                     ]
-            }
-      }
+      & (pdfDocumentPages . pdfPagesKids) .~ initPages
+        ++ [ lastPage
+               { pdfPageContents =
+                   (pdfPageContents lastPage)
+                     { pdfContentsStreamContents =
+                         prefixContents
+                           ++ [lastText {pdfTextX = x, pdfTextY = y}]
+                           ++ suffixContents
+                     }
+               }
+           ]
     where
-      (pdfPages, initPages, lastPage) = pdfPagesTuple pdfDoc
+      (initPages, lastPage) = pdfPagesTuple pdfDoc
       (prefixContents, lastText, suffixContents) = pdfTextsTuple lastPage
   execute (ActionTextColor color) pdfDoc =
     pdfDoc
-      { pdfDocumentPages =
-          pdfPages
-            { pdfPagesKids =
-                initPages
-                  ++ [ lastPage
-                         { pdfPageContents =
-                             (pdfPageContents lastPage)
-                               { pdfContentsStreamContents =
-                                   prefixContents
-                                     ++ [lastText {pdfTextColor = Just color}]
-                                     ++ suffixContents
-                               }
-                         }
-                     ]
-            }
-      }
+      & (pdfDocumentPages . pdfPagesKids) .~ initPages
+        ++ [ lastPage
+               { pdfPageContents =
+                   (pdfPageContents lastPage)
+                     { pdfContentsStreamContents =
+                         prefixContents
+                           ++ [lastText {pdfTextColor = Just color}]
+                           ++ suffixContents
+                     }
+               }
+           ]
     where
-      (pdfPages, initPages, lastPage) = pdfPagesTuple pdfDoc
+      (initPages, lastPage) = pdfPagesTuple pdfDoc
       (prefixContents, lastText, suffixContents) = pdfTextsTuple lastPage
   execute (ActionTextFillOpacity fillOpacity) pdfDoc =
     pdfDoc
-      { pdfDocumentNextObjId = nextObjId,
-        pdfDocumentExtGStates =
-          L.nub $ pdfDocumentExtGStates pdfDoc ++ [pdfExtGState],
-        pdfDocumentPages =
-          pdfPages
-            { pdfPagesKids =
-                initPages
-                  ++ [ lastPage
-                         { pdfPageResources =
-                             (pdfPageResources lastPage)
-                               { pdfResourcesExtGStates =
-                                   L.nub $
-                                     ( pdfResourcesExtGStates . pdfPageResources $
-                                         lastPage
-                                     )
-                                       ++ [pdfExtGState]
-                               },
-                           pdfPageContents =
-                             (pdfPageContents lastPage)
-                               { pdfContentsStreamContents =
-                                   prefixContents
-                                     ++ [lastText {pdfTextFillOpacity = Just fillOpacity}]
-                                     ++ suffixContents
-                               }
-                         }
-                     ]
-            }
-      }
+      & pdfDocumentNextObjId .~ nextObjId
+      & pdfDocumentExtGStates .~ L.nub (_pdfDocumentExtGStates pdfDoc ++ [pdfExtGState])
+      & (pdfDocumentPages . pdfPagesKids) .~ initPages
+        ++ [ lastPage
+               { pdfPageResources =
+                   (pdfPageResources lastPage)
+                     { pdfResourcesExtGStates =
+                         L.nub $
+                           ( pdfResourcesExtGStates . pdfPageResources $
+                               lastPage
+                           )
+                             ++ [pdfExtGState]
+                     },
+                 pdfPageContents =
+                   (pdfPageContents lastPage)
+                     { pdfContentsStreamContents =
+                         prefixContents
+                           ++ [lastText {pdfTextFillOpacity = Just fillOpacity}]
+                           ++ suffixContents
+                     }
+               }
+           ]
     where
-      extGStateObjId = pdfDocumentNextObjId pdfDoc
+      extGStateObjId = _pdfDocumentNextObjId pdfDoc
       maybePdfExtGState = findPdfExtGState fillOpacity pdfDoc
       extGStateAlreadyAdded = M.isJust maybePdfExtGState
       pdfExtGState =
@@ -1108,27 +1047,22 @@ instance IsExecutableAction Action where
               }
       nextObjId =
         if extGStateAlreadyAdded
-          then pdfDocumentNextObjId pdfDoc
-          else pdfDocumentNextObjId pdfDoc + 1
-      (pdfPages, initPages, lastPage) = pdfPagesTuple pdfDoc
+          then _pdfDocumentNextObjId pdfDoc
+          else _pdfDocumentNextObjId pdfDoc + 1
+      (initPages, lastPage) = pdfPagesTuple pdfDoc
       (prefixContents, lastText, suffixContents) = pdfTextsTuple lastPage
   execute ActionMoveDown pdfDoc =
     pdfDoc
-      { pdfDocumentPages =
-          pdfPages
-            { pdfPagesKids =
-                initPages
-                  ++ [ lastPage
-                         { pdfPageCurrentPos =
-                             PdfPos
-                               (pdfTextX lastText)
-                               (pdfTextY lastText + currentLineHeight)
-                         }
-                     ]
-            }
-      }
+      & (pdfDocumentPages . pdfPagesKids) .~ initPages
+        ++ [ lastPage
+               { pdfPageCurrentPos =
+                   PdfPos
+                     (pdfTextX lastText)
+                     (pdfTextY lastText + currentLineHeight)
+               }
+           ]
     where
-      (pdfPages, initPages, lastPage) = pdfPagesTuple pdfDoc
+      (initPages, lastPage) = pdfPagesTuple pdfDoc
       (_, lastText, _) = pdfTextsTuple lastPage
       currentLineHeight =
         case (pdfTextStandardFont lastText, pdfTextFontSize lastText) of
@@ -1136,93 +1070,73 @@ instance IsExecutableAction Action where
           _ -> 0
   execute ActionPath pdfDoc =
     pdfDoc
-      { pdfDocumentPages =
-          pdfPages
-            { pdfPagesKids =
-                initPages
-                  ++ [ lastPage
-                         { pdfPageContents =
-                             (pdfPageContents lastPage)
-                               { pdfContentsStreamContents =
-                                   pdfContentsStreamContents
-                                     (pdfPageContents lastPage)
-                                     ++ [ PdfPath
-                                            { pdfPathPoints = [],
-                                              pdfPathWidth = Nothing,
-                                              pdfPathDoStroke = Nothing
-                                            }
-                                        ]
-                               }
-                         }
-                     ]
-            }
-      }
+      & (pdfDocumentPages . pdfPagesKids) .~ initPages
+        ++ [ lastPage
+               { pdfPageContents =
+                   (pdfPageContents lastPage)
+                     { pdfContentsStreamContents =
+                         pdfContentsStreamContents
+                           (pdfPageContents lastPage)
+                           ++ [ PdfPath
+                                  { pdfPathPoints = [],
+                                    pdfPathWidth = Nothing,
+                                    pdfPathDoStroke = Nothing
+                                  }
+                              ]
+                     }
+               }
+           ]
     where
-      (pdfPages, initPages, lastPage) = pdfPagesTuple pdfDoc
+      (initPages, lastPage) = pdfPagesTuple pdfDoc
   execute (ActionPathPoint x y) pdfDoc =
     pdfDoc
-      { pdfDocumentPages =
-          pdfPages
-            { pdfPagesKids =
-                initPages
-                  ++ [ lastPage
-                         { pdfPageContents =
-                             (pdfPageContents lastPage)
-                               { pdfContentsStreamContents =
-                                   prefixContents
-                                     ++ [ lastPath
-                                            { pdfPathPoints =
-                                                pdfPathPoints lastPath ++ [PdfPos x y]
-                                            }
-                                        ]
-                                     ++ suffixContents
-                               }
-                         }
-                     ]
-            }
-      }
+      & (pdfDocumentPages . pdfPagesKids) .~ initPages
+        ++ [ lastPage
+               { pdfPageContents =
+                   (pdfPageContents lastPage)
+                     { pdfContentsStreamContents =
+                         prefixContents
+                           ++ [ lastPath
+                                  { pdfPathPoints =
+                                      pdfPathPoints lastPath ++ [PdfPos x y]
+                                  }
+                              ]
+                           ++ suffixContents
+                     }
+               }
+           ]
     where
-      (pdfPages, initPages, lastPage) = pdfPagesTuple pdfDoc
+      (initPages, lastPage) = pdfPagesTuple pdfDoc
       (prefixContents, lastPath, suffixContents) = pdfPathsTuple lastPage
   execute (ActionPathWidth w) pdfDoc =
     pdfDoc
-      { pdfDocumentPages =
-          pdfPages
-            { pdfPagesKids =
-                initPages
-                  ++ [ lastPage
-                         { pdfPageContents =
-                             (pdfPageContents lastPage)
-                               { pdfContentsStreamContents =
-                                   prefixContents
-                                     ++ [lastPath {pdfPathWidth = Just w}]
-                                     ++ suffixContents
-                               }
-                         }
-                     ]
-            }
-      }
+      & (pdfDocumentPages . pdfPagesKids) .~ initPages
+        ++ [ lastPage
+               { pdfPageContents =
+                   (pdfPageContents lastPage)
+                     { pdfContentsStreamContents =
+                         prefixContents
+                           ++ [lastPath {pdfPathWidth = Just w}]
+                           ++ suffixContents
+                     }
+               }
+           ]
     where
-      (pdfPages, initPages, lastPage) = pdfPagesTuple pdfDoc
+      (initPages, lastPage) = pdfPagesTuple pdfDoc
       (prefixContents, lastPath, suffixContents) = pdfPathsTuple lastPage
   execute ActionPathStroke pdfDoc =
     pdfDoc
-      { pdfDocumentPages =
-          pdfPages
-            { pdfPagesKids =
-                initPages
-                  ++ [ lastPage
-                         { pdfPageContents =
-                             (pdfPageContents lastPage)
-                               { pdfContentsStreamContents =
-                                   prefixContents
-                                     ++ [lastPath {pdfPathDoStroke = Just True}]
-                                     ++ suffixContents
-                               }
-                         }
-                     ]
-            }
-      }
+      & (pdfDocumentPages . pdfPagesKids) .~ initPages
+        ++ [ lastPage
+               { pdfPageContents =
+                   (pdfPageContents lastPage)
+                     { pdfContentsStreamContents =
+                         prefixContents
+                           ++ [lastPath {pdfPathDoStroke = Just True}]
+                           ++ suffixContents
+                     }
+               }
+           ]
     where
-      (pdfPages, initPages, lastPage) = pdfPagesTuple pdfDoc
+      (initPages, lastPage) = pdfPagesTuple pdfDoc
       (prefixContents, lastPath, suffixContents) = pdfPathsTuple lastPage
