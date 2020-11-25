@@ -430,16 +430,13 @@ fontLineHeight :: PdfStandardFont -> Double -> Double
 fontLineHeight stdFont size =
   case (maybeAscender, maybeDescender) of
     (Just ascender, Just descender) ->
-      (ascender + lineGap - descender) / 1000 * size
+      (ascender + lineGap ascender descender - descender) / 1000 * size
     _ -> 0
   where
     afmFont = pdfStandardFontAfmFont stdFont
     maybeAscender = afmFontAscender afmFont
     maybeDescender = afmFontDescender afmFont
-    lineGap =
-      case (maybeAscender, maybeDescender) of
-        (Just ascender, Just descender) -> top - bottom - ascender + descender
-        _ -> 0
+    lineGap ascender descender = top - bottom - ascender + descender
     (top, bottom) =
       let (_, b, _, t) = afmFontFontBBox afmFont
        in (t, b)
