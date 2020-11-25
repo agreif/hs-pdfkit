@@ -547,7 +547,7 @@ instance IsStreamContent PdfStreamContent where
                    ]
                  Just (PdfColorCmyk c m y k) ->
                    [ "/DeviceCMYK cs",
-                     T.intercalate " " $ L.map doubleToText [c, m, y, k] ++ ["scn"]
+                     T.intercalate " " $ L.map (doubleToText . (/ 100)) [c, m, y, k] ++ ["scn"]
                    ]
                  _ -> []
              )

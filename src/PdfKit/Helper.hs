@@ -39,7 +39,7 @@ intToText :: Int -> Text
 intToText = T.pack . show
 
 doubleToText :: Double -> Text
-doubleToText = T.pack . show
+doubleToText d = T.pack $ printf "%f" d
 
 ref :: Int -> Text
 ref objId = T.concat [intToText objId, " 0 R"]
