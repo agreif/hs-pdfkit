@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 2c1f78acff84074ee82e83fe6c2a520cbc38fe059252b0ed2198c5f731213cc5
+-- hash: 5c36820478105e48d74f4521727eb96d541e115aac6456dab05cf90601a668cb
 
 name:           hs-pdfkit
 version:        0.0.1
@@ -22,6 +22,22 @@ extra-source-files:
     package.yaml
     README.md
     stack.yaml
+data-files:
+    Core14_AFMs/Courier-Bold.afm
+    Core14_AFMs/Helvetica-BoldOblique.afm
+    Core14_AFMs/Times-Bold.afm
+    Core14_AFMs/Courier-BoldOblique.afm
+    Core14_AFMs/Helvetica-Oblique.afm
+    Core14_AFMs/Times-BoldItalic.afm
+    Core14_AFMs/Courier-Oblique.afm
+    Core14_AFMs/Helvetica.afm
+    Core14_AFMs/Times-Italic.afm
+    Core14_AFMs/Courier.afm
+    Core14_AFMs/MustRead.html
+    Core14_AFMs/Times-Roman.afm
+    Core14_AFMs/Helvetica-Bold.afm
+    Core14_AFMs/Symbol.afm
+    Core14_AFMs/ZapfDingbats.afm
 
 source-repository head
   type: git
@@ -34,21 +50,8 @@ flag library-only
 library
   exposed-modules:
       PdfKit
-      PdfKit.AfmFont.AfmFont
-      PdfKit.AfmFont.Courier
-      PdfKit.AfmFont.CourierBold
-      PdfKit.AfmFont.CourierBoldOblique
-      PdfKit.AfmFont.CourierOblique
-      PdfKit.AfmFont.Helvetica
-      PdfKit.AfmFont.HelveticaBold
-      PdfKit.AfmFont.HelveticaBoldOblique
-      PdfKit.AfmFont.HelveticaOblique
-      PdfKit.AfmFont.Symbol
-      PdfKit.AfmFont.TimesBold
-      PdfKit.AfmFont.TimesBoldItalic
-      PdfKit.AfmFont.TimesItalic
-      PdfKit.AfmFont.TimesRoman
-      PdfKit.AfmFont.ZapfDingbats
+      PdfKit.AfmFont
+      PdfKit.AfmParser
       PdfKit.Api
       PdfKit.Builder
       PdfKit.Helper
@@ -60,6 +63,8 @@ library
       aeson
     , base >=4.8.2.0 && <4.9 || >=4.9.1.0 && <5
     , bytestring
+    , directory
+    , filepath
     , hex
     , microlens-platform
     , text

@@ -579,8 +579,7 @@ instance IsStreamContent PdfStreamContent where
                  ["[<", T.decodeUtf8 $ H.hex $ B8.pack $ T.unpack t, "> 0] TJ"],
                "ET",
                "Q"
-             ] ::
-          [Text]
+             ]
       _ -> []
     where
       PdfPageSize {pdfPageSizeHeight = pageHeight} = pdfPageSize pdfPage
@@ -591,8 +590,7 @@ instance IsStreamContent PdfStreamContent where
             " ",
             case (pdfTextStandardFont pdfText, pdfTextFontSize pdfText) of
               (Just stdFont, Just fontSize) ->
-                doubleToText $
-                  pageHeight - pdfTextY pdfText - dy stdFont fontSize
+                doubleToText $ pageHeight - pdfTextY pdfText - fontAscent stdFont fontSize
               _ -> "",
             " Tm"
           ]

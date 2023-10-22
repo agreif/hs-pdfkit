@@ -3,24 +3,12 @@
 module PdfKit.Helper where
 
 import Data.Aeson ((.=), ToJSON, object, toJSON)
+import qualified Data.List as L
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Time
-import PdfKit.AfmFont.AfmFont
-import PdfKit.AfmFont.Courier
-import PdfKit.AfmFont.CourierBold
-import PdfKit.AfmFont.CourierBoldOblique
-import PdfKit.AfmFont.CourierOblique
-import PdfKit.AfmFont.Helvetica
-import PdfKit.AfmFont.HelveticaBold
-import PdfKit.AfmFont.HelveticaBoldOblique
-import PdfKit.AfmFont.HelveticaOblique
-import PdfKit.AfmFont.Symbol
-import PdfKit.AfmFont.TimesBold
-import PdfKit.AfmFont.TimesBoldItalic
-import PdfKit.AfmFont.TimesItalic
-import PdfKit.AfmFont.TimesRoman
-import PdfKit.AfmFont.ZapfDingbats
+import PdfKit.AfmFont
+import PdfKit.AfmParser
 import Text.Printf (printf)
 
 formatLocalTime :: TimeZone -> UTCTime -> String
@@ -323,7 +311,7 @@ data PdfStandardFont = PdfStandardFont
     pdfStandardFontEncoding :: Text,
     pdfStandardFontAfmFont :: AfmFont
   }
-  deriving (Eq)
+  deriving (Show, Eq)
 
 instance ToJSON PdfStandardFont where
   toJSON o =
@@ -333,83 +321,201 @@ instance ToJSON PdfStandardFont where
         "encoding" .= pdfStandardFontEncoding o
       ]
 
-courier :: PdfStandardFont
-courier = PdfStandardFont "Courier" "Type1" "WinAnsiEncoding" afmFontCourier
+mkAfmStdFontCourier :: IO (Maybe PdfStandardFont)
+mkAfmStdFontCourier = do
+  maybeAfmFont <- mkAfmFont "Courier"
+  return $
+    case maybeAfmFont of
+      Just afmFont ->
+        Just $
+          PdfStandardFont
+            "Courier"
+            "Type1"
+            "WinAnsiEncoding"
+            afmFont
+      _ -> Nothing
 
-courierBold :: PdfStandardFont
-courierBold =
-  PdfStandardFont "Courier-Bold" "Type1" "WinAnsiEncoding" afmFontCourierBold
+mkAfmStdFontCourierBold :: IO (Maybe PdfStandardFont)
+mkAfmStdFontCourierBold = do
+  maybeAfmFont <- mkAfmFont "Courier-Bold"
+  return $
+    case maybeAfmFont of
+      Just afmFont ->
+        Just $
+          PdfStandardFont
+            "Courier-Bold"
+            "Type1"
+            "WinAnsiEncoding"
+            afmFont
+      _ -> Nothing
 
-courierOblique :: PdfStandardFont
-courierOblique =
-  PdfStandardFont
-    "Courier-Oblique"
-    "Type1"
-    "WinAnsiEncoding"
-    afmFontCourierOblique
+mkAfmStdFontCourierOblique :: IO (Maybe PdfStandardFont)
+mkAfmStdFontCourierOblique = do
+  maybeAfmFont <- mkAfmFont "Courier-Oblique"
+  return $
+    case maybeAfmFont of
+      Just afmFont ->
+        Just $
+          PdfStandardFont
+            "Courier-Oblique"
+            "Type1"
+            "WinAnsiEncoding"
+            afmFont
+      _ -> Nothing
 
-courierBoldOblique :: PdfStandardFont
-courierBoldOblique =
-  PdfStandardFont
-    "Courier-BoldOblique"
-    "Type1"
-    "WinAnsiEncoding"
-    afmFontCourierBoldOblique
+mkAfmStdFontCourierBoldOblique :: IO (Maybe PdfStandardFont)
+mkAfmStdFontCourierBoldOblique = do
+  maybeAfmFont <- mkAfmFont "Courier-BoldOblique"
+  return $
+    case maybeAfmFont of
+      Just afmFont ->
+        Just $
+          PdfStandardFont
+            "Courier-BoldOblique"
+            "Type1"
+            "WinAnsiEncoding"
+            afmFont
+      _ -> Nothing
 
-helvetica :: PdfStandardFont
-helvetica =
-  PdfStandardFont "Helvetica" "Type1" "WinAnsiEncoding" afmFontHelvetica
+mkAfmStdFontHelvetica :: IO (Maybe PdfStandardFont)
+mkAfmStdFontHelvetica = do
+  maybeAfmFont <- mkAfmFont "Helvetica"
+  return $
+    case maybeAfmFont of
+      Just afmFont ->
+        Just $
+          PdfStandardFont
+            "Helvetica"
+            "Type1"
+            "WinAnsiEncoding"
+            afmFont
+      _ -> Nothing
 
-helveticaBold :: PdfStandardFont
-helveticaBold =
-  PdfStandardFont
-    "Helvetica-Bold"
-    "Type1"
-    "WinAnsiEncoding"
-    afmFontHelveticaBold
+mkAfmStdFontHelveticaBold :: IO (Maybe PdfStandardFont)
+mkAfmStdFontHelveticaBold = do
+  maybeAfmFont <- mkAfmFont "Helvetica-Bold"
+  return $
+    case maybeAfmFont of
+      Just afmFont ->
+        Just $
+          PdfStandardFont
+            "Helvetica-Bold"
+            "Type1"
+            "WinAnsiEncoding"
+            afmFont
+      _ -> Nothing
 
-helveticaOblique :: PdfStandardFont
-helveticaOblique =
-  PdfStandardFont
-    "Helvetica-Oblique"
-    "Type1"
-    "WinAnsiEncoding"
-    afmFontHelveticaOblique
+mkAfmStdFontHelveticaOblique :: IO (Maybe PdfStandardFont)
+mkAfmStdFontHelveticaOblique = do
+  maybeAfmFont <- mkAfmFont "Helvetica-Oblique"
+  return $
+    case maybeAfmFont of
+      Just afmFont ->
+        Just $
+          PdfStandardFont
+            "Helvetica-Oblique"
+            "Type1"
+            "WinAnsiEncoding"
+            afmFont
+      _ -> Nothing
 
-helveticaBoldOblique :: PdfStandardFont
-helveticaBoldOblique =
-  PdfStandardFont
-    "Helvetica-BoldOblique"
-    "Type1"
-    "WinAnsiEncoding"
-    afmFontHelveticaBoldOblique
+mkAfmStdFontHelveticaBoldOblique :: IO (Maybe PdfStandardFont)
+mkAfmStdFontHelveticaBoldOblique = do
+  maybeAfmFont <- mkAfmFont "Helvetica-BoldOblique"
+  return $
+    case maybeAfmFont of
+      Just afmFont ->
+        Just $
+          PdfStandardFont
+            "Helvetica-BoldOblique"
+            "Type1"
+            "WinAnsiEncoding"
+            afmFont
+      _ -> Nothing
 
-timesRoman :: PdfStandardFont
-timesRoman =
-  PdfStandardFont "Times-Roman" "Type1" "WinAnsiEncoding" afmFontTimesRoman
+mkAfmStdFontTimesRoman :: IO (Maybe PdfStandardFont)
+mkAfmStdFontTimesRoman = do
+  maybeAfmFont <- mkAfmFont "Times-Roman"
+  return $
+    case maybeAfmFont of
+      Just afmFont ->
+        Just $
+          PdfStandardFont
+            "Times-Roman"
+            "Type1"
+            "WinAnsiEncoding"
+            afmFont
+      _ -> Nothing
 
-timesBold :: PdfStandardFont
-timesBold =
-  PdfStandardFont "Times-Bold" "Type1" "WinAnsiEncoding" afmFontTimesBold
+mkAfmStdFontTimesBold :: IO (Maybe PdfStandardFont)
+mkAfmStdFontTimesBold = do
+  maybeAfmFont <- mkAfmFont "Times-Bold"
+  return $
+    case maybeAfmFont of
+      Just afmFont ->
+        Just $
+          PdfStandardFont
+            "Times-Bold"
+            "Type1"
+            "WinAnsiEncoding"
+            afmFont
+      _ -> Nothing
 
-timesItalic :: PdfStandardFont
-timesItalic =
-  PdfStandardFont "Times-Italic" "Type1" "WinAnsiEncoding" afmFontTimesItalic
+mkAfmStdFontTimesItalic :: IO (Maybe PdfStandardFont)
+mkAfmStdFontTimesItalic = do
+  maybeAfmFont <- mkAfmFont "Times-Italic"
+  return $
+    case maybeAfmFont of
+      Just afmFont ->
+        Just $
+          PdfStandardFont
+            "Times-Italic"
+            "Type1"
+            "WinAnsiEncoding"
+            afmFont
+      _ -> Nothing
 
-timesBoldItalic :: PdfStandardFont
-timesBoldItalic =
-  PdfStandardFont
-    "Times-BoldItalic"
-    "Type1"
-    "WinAnsiEncoding"
-    afmFontTimesBoldItalic
+mkAfmStdFontTimesBoldItalic :: IO (Maybe PdfStandardFont)
+mkAfmStdFontTimesBoldItalic = do
+  maybeAfmFont <- mkAfmFont "Times-BoldItalic"
+  return $
+    case maybeAfmFont of
+      Just afmFont ->
+        Just $
+          PdfStandardFont
+            "Times-BoldItalic"
+            "Type1"
+            "WinAnsiEncoding"
+            afmFont
+      _ -> Nothing
 
-symbol :: PdfStandardFont
-symbol = PdfStandardFont "Symbol" "Type1" "WinAnsiEncoding" afmFontSymbol
+mkAfmStdFontSymbol :: IO (Maybe PdfStandardFont)
+mkAfmStdFontSymbol = do
+  maybeAfmFont <- mkAfmFont "Symbol"
+  return $
+    case maybeAfmFont of
+      Just afmFont ->
+        Just $
+          PdfStandardFont
+            "Symbol"
+            "Type1"
+            "WinAnsiEncoding"
+            afmFont
+      _ -> Nothing
 
-zapfDingbats :: PdfStandardFont
-zapfDingbats =
-  PdfStandardFont "ZapfDingbats" "Type1" "WinAnsiEncoding" afmFontZapfDingbats
+mkAfmStdFontZapfDingbats :: IO (Maybe PdfStandardFont)
+mkAfmStdFontZapfDingbats = do
+  maybeAfmFont <- mkAfmFont "ZapfDingbats"
+  return $
+    case maybeAfmFont of
+      Just afmFont ->
+        Just $
+          PdfStandardFont
+            "ZapfDingbats"
+            "Type1"
+            "WinAnsiEncoding"
+            afmFont
+      _ -> Nothing
 
 -----------------------------------------------
 translateOrigin :: Double -> Text
@@ -417,20 +523,20 @@ translateOrigin pageHeight =
   T.concat ["1 0 0 -1 0 ", doubleToText pageHeight, " cm"]
 
 -----------------------------------------------
-dy :: PdfStandardFont -> Double -> Double
-dy stdFont size =
+fontAscent :: PdfStandardFont -> Double -> Double
+fontAscent stdFont pointSize =
   case maybeAscender of
-    Just ascender -> ascender / 1000 * size
+    Just ascender -> ascender / 1000 * pointSize
     _ -> 0
   where
     afmFont = pdfStandardFontAfmFont stdFont
     maybeAscender = afmFontAscender afmFont
 
 fontLineHeight :: PdfStandardFont -> Double -> Double
-fontLineHeight stdFont size =
+fontLineHeight stdFont pointSize =
   case (maybeAscender, maybeDescender) of
     (Just ascender, Just descender) ->
-      (ascender + lineGap ascender descender - descender) / 1000 * size
+      (ascender + lineGap ascender descender - descender) / 1000 * pointSize
     _ -> 0
   where
     afmFont = pdfStandardFontAfmFont stdFont
@@ -441,11 +547,32 @@ fontLineHeight stdFont size =
       let (_, b, _, t) = afmFontFontBBox afmFont
        in (t, b)
 
+splitLines :: Text -> Double -> PdfStandardFont -> Double -> [Text]
+splitLines text maxWidth stdFont pointSize = L.foldl (\acc paragraph -> acc ++ lines' paragraph) [] paragraphs
+  where
+    spaceWidth = textWidth " " font pointSize
+    font = pdfStandardFontAfmFont stdFont
+    paragraphs :: [Text]
+    paragraphs = T.lines text
+    wordWidthTuples :: Text -> [(Text, Double)]
+    wordWidthTuples text' = L.map (\t -> (t, textWidth t font pointSize)) $ T.words text'
+    lines' :: Text -> [Text]
+    lines' text' = lines'' 0 [] [] (wordWidthTuples text')
+    --
+    lines'' :: Double -> [Text] -> [Text] -> [(Text, Double)] -> [Text]
+    lines'' _ collectedWords collectedLines [] = collectedLines ++ [T.intercalate " " collectedWords]
+    lines'' width collectedWords collectedLines widthTuples =
+      if width + spaceWidth + wi > maxWidth
+        then lines'' 0 [] (collectedLines ++ [T.intercalate " " collectedWords]) widthTuples
+        else lines'' (width + spaceWidth + wi) (collectedWords ++ [wo]) collectedLines (L.tail widthTuples)
+      where
+        (wo, wi) = L.head widthTuples
+
 defaultPageMargins :: PdfPageMargins
 defaultPageMargins = PdfPageMargins 72 72 72 72
 
-defaultFont :: PdfStandardFont
-defaultFont = helvetica
+defaultFont :: IO (Maybe PdfStandardFont)
+defaultFont = mkAfmStdFontHelvetica
 
 defaultFontSize :: Double
 defaultFontSize = 24

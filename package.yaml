@@ -22,6 +22,27 @@ dependencies:
 - time
 - hex
 - microlens-platform
+- filepath
+- directory
+
+data-files:
+- Core14_AFMs/Courier-Bold.afm
+- Core14_AFMs/Helvetica-BoldOblique.afm
+- Core14_AFMs/Times-Bold.afm
+- Core14_AFMs/Courier-BoldOblique.afm
+- Core14_AFMs/Helvetica-Oblique.afm
+- Core14_AFMs/Times-BoldItalic.afm
+- Core14_AFMs/Courier-Oblique.afm
+- Core14_AFMs/Helvetica.afm
+- Core14_AFMs/Times-Italic.afm
+- Core14_AFMs/Courier.afm
+- Core14_AFMs/MustRead.html
+- Core14_AFMs/Times-Roman.afm
+- Core14_AFMs/Helvetica-Bold.afm
+- Core14_AFMs/Symbol.afm
+- Core14_AFMs/ZapfDingbats.afm
+
+
 
 library:
   source-dirs: src
